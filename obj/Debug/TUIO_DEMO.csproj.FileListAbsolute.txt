@@ -1,0 +1,42 @@
+/Users/moamenibrahem/Downloads/TUIO11_NET-master/bin/Debug/TuioDemo.exe
+/Users/moamenibrahem/Downloads/TUIO11_NET-master/bin/Debug/TuioDemo.pdb
+/Users/moamenibrahem/Downloads/TUIO11_NET-master/obj/Debug/TUIO_DEMO.csproj.AssemblyReference.cache
+/Users/moamenibrahem/Downloads/TUIO11_NET-master/obj/Debug/TUIO_DEMO.csproj.CoreCompileInputs.cache
+/Users/moamenibrahem/Downloads/TUIO11_NET-master/obj/Debug/TuioDemo.exe
+/Users/moamenibrahem/Downloads/TUIO11_NET-master/obj/Debug/TuioDemo.pdb
+C:\Users\Lenovo\Desktop\TUIO11_NET-master\bin\Debug\TuioDemo.exe.config
+C:\Users\Lenovo\Desktop\TUIO11_NET-master\bin\Debug\TuioDemo.exe
+C:\Users\Lenovo\Desktop\TUIO11_NET-master\bin\Debug\TuioDemo.pdb
+C:\Users\Lenovo\Desktop\TUIO11_NET-master\obj\Debug\TUIO_DEMO.csproj.AssemblyReference.cache
+C:\Users\Lenovo\Desktop\TUIO11_NET-master\obj\Debug\TuioDemo.resources
+C:\Users\Lenovo\Desktop\TUIO11_NET-master\obj\Debug\TUIO_DEMO.csproj.GenerateResource.cache
+C:\Users\Lenovo\Desktop\TUIO11_NET-master\obj\Debug\TUIO_DEMO.csproj.CoreCompileInputs.cache
+C:\Users\Lenovo\Desktop\TUIO11_NET-master\obj\Debug\TuioDemo.exe
+C:\Users\Lenovo\Desktop\TUIO11_NET-master\obj\Debug\TuioDemo.pdb
+C:\Users\alie0\Downloads\hci_projectt\TUIO11_NET-master\bin\Debug\TuioDemo.exe.config
+C:\Users\alie0\Downloads\hci_projectt\TUIO11_NET-master\bin\Debug\TuioDemo.exe
+C:\Users\alie0\Downloads\hci_projectt\TUIO11_NET-master\bin\Debug\TuioDemo.pdb
+C:\Users\alie0\Downloads\hci_projectt\TUIO11_NET-master\obj\Debug\TUIO_DEMO.csproj.AssemblyReference.cache
+C:\Users\alie0\Downloads\hci_projectt\TUIO11_NET-master\obj\Debug\TuioDemo.resources
+C:\Users\alie0\Downloads\hci_projectt\TUIO11_NET-master\obj\Debug\TUIO_DEMO.csproj.GenerateResource.cache
+C:\Users\alie0\Downloads\hci_projectt\TUIO11_NET-master\obj\Debug\TUIO_DEMO.csproj.CoreCompileInputs.cache
+C:\Users\alie0\Downloads\hci_projectt\TUIO11_NET-master\obj\Debug\TuioDemo.exe
+C:\Users\alie0\Downloads\hci_projectt\TUIO11_NET-master\obj\Debug\TuioDemo.pdb
+C:\Users\Lenovo\Music\hci_projectt\TUIO11_NET-master\bin\Debug\TuioDemo.exe.config
+C:\Users\Lenovo\Music\hci_projectt\TUIO11_NET-master\bin\Debug\TuioDemo.exe
+C:\Users\Lenovo\Music\hci_projectt\TUIO11_NET-master\bin\Debug\TuioDemo.pdb
+C:\Users\Lenovo\Music\hci_projectt\TUIO11_NET-master\obj\Debug\TUIO_DEMO.csproj.AssemblyReference.cache
+C:\Users\Lenovo\Music\hci_projectt\TUIO11_NET-master\obj\Debug\TuioDemo.resources
+C:\Users\Lenovo\Music\hci_projectt\TUIO11_NET-master\obj\Debug\TUIO_DEMO.csproj.GenerateResource.cache
+C:\Users\Lenovo\Music\hci_projectt\TUIO11_NET-master\obj\Debug\TUIO_DEMO.csproj.CoreCompileInputs.cache
+C:\Users\Lenovo\Music\hci_projectt\TUIO11_NET-master\obj\Debug\TuioDemo.exe
+C:\Users\Lenovo\Music\hci_projectt\TUIO11_NET-master\obj\Debug\TuioDemo.pdb
+E:\Lectures and Notes\Fourth Year First Semester\HCI_CS484\HCI_Project\hci_projectt\TUIO11_NET-master\bin\Debug\TuioDemo.exe.config
+E:\Lectures and Notes\Fourth Year First Semester\HCI_CS484\HCI_Project\hci_projectt\TUIO11_NET-master\bin\Debug\TuioDemo.exe
+E:\Lectures and Notes\Fourth Year First Semester\HCI_CS484\HCI_Project\hci_projectt\TUIO11_NET-master\bin\Debug\TuioDemo.pdb
+E:\Lectures and Notes\Fourth Year First Semester\HCI_CS484\HCI_Project\hci_projectt\TUIO11_NET-master\obj\Debug\TUIO_DEMO.csproj.AssemblyReference.cache
+E:\Lectures and Notes\Fourth Year First Semester\HCI_CS484\HCI_Project\hci_projectt\TUIO11_NET-master\obj\Debug\TuioDemo.resources
+E:\Lectures and Notes\Fourth Year First Semester\HCI_CS484\HCI_Project\hci_projectt\TUIO11_NET-master\obj\Debug\TUIO_DEMO.csproj.GenerateResource.cache
+E:\Lectures and Notes\Fourth Year First Semester\HCI_CS484\HCI_Project\hci_projectt\TUIO11_NET-master\obj\Debug\TUIO_DEMO.csproj.CoreCompileInputs.cache
+E:\Lectures and Notes\Fourth Year First Semester\HCI_CS484\HCI_Project\hci_projectt\TUIO11_NET-master\obj\Debug\TuioDemo.exe
+E:\Lectures and Notes\Fourth Year First Semester\HCI_CS484\HCI_Project\hci_projectt\TUIO11_NET-master\obj\Debug\TuioDemo.pdb
