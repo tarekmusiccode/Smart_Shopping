@@ -1,0 +1,6 @@
+train: C:\Users\Lenovo\Desktop\object detection\train
+val: C:\Users\Lenovo\Desktop\object detection\val
+
+
+nc: 17
+names: ["baby powder","bandage","cotton pads","deodorant","hairbrush","mouthwash","nail polish","razor","skin care","soap","syringe","syrups","thermometer","toothbrush","toothpaste","vitamins","wipes"]
