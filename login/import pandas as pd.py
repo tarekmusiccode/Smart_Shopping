@@ -1,9 +1,9 @@
 import pandas as pd
-from bleak import BleakScanner
+import bluetooth
 import asyncio
 
 # Load the Excel file with registered users
-file_path = r"c:\Users\Lenovo\Desktop\bloutooth.xlsx"  # Replace with your Excel file path
+file_path = r"c:\Users\Lenovo\Desktop\login\bloutooth.xlsx"  # Replace with your Excel file path
 users_df = pd.read_excel(file_path)
 
 # Extract registered MAC addresses for quick lookup
@@ -20,25 +20,20 @@ async def continuous_bluetooth_login(scan_duration=5, cycles=5):
 
             # Perform multiple scan cycles per round
             for _ in range(cycles):
-                scanner = BleakScanner()
-                await scanner.start()
-                await asyncio.sleep(scan_duration)  # Allow the scanner to run for the specified duration
-                await scanner.stop()
+                # Start a Bluetooth scan for Classic Bluetooth devices (both BLE and Classic)
+                nearby_devices = bluetooth.discover_devices(duration=scan_duration, lookup_names=True, device_id=-1, flush_cache=True)
 
-                # Retrieve discovered devices and add them to the list
-                devices = await scanner.get_discovered_devices()
-                all_devices.extend(devices)  # Combine devices from each scan
+                for addr, name in nearby_devices:
+                    all_devices.append((addr, name))
 
             # Remove duplicates based on MAC address
-            unique_devices = {device.address: device for device in all_devices}.values()
+            unique_devices = {device[0]: device[1] for device in all_devices}.items()
 
             if not unique_devices:
                 print("No devices found during this scan.")
             else:
                 # Loop through detected devices
-                for device in unique_devices:
-                    mac_address = device.address
-                    device_name = device.name or "Unknown Device"
+                for mac_address, device_name in unique_devices:
                     print(f"Detected device: {device_name}, MAC Address: {mac_address}")
 
                     # Check if the MAC address matches a registered user
@@ -58,9 +53,10 @@ async def continuous_bluetooth_login(scan_duration=5, cycles=5):
             await asyncio.sleep(5)  # Pause before the next scan cycle
     except Exception as e:
         print(f"An error occurred during Bluetooth scanning: {e}")
+
 def main():
     try:
-        asyncio.run(continuous_bluetooth_login(scan_duration=10,cycles=5))
+        asyncio.run(continuous_bluetooth_login(scan_duration=10, cycles=5))
     except RuntimeError as e:
         if "This event loop is already running" in str(e):
             print("Event loop is already running. Executing coroutine with ensure_future().")
