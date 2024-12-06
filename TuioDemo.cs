@@ -33,6 +33,7 @@ public class TuioDemo : Form, TuioListener
     private bool verbose;
     private Image lastObjectImage;
     private int latestId = -1;
+    private bool messageDisplayed = false;
     Font font = new Font("Arial", 10.0f);
     SolidBrush fntBrush = new SolidBrush(Color.White);
     SolidBrush bgrBrush = new SolidBrush(Color.FromArgb(0, 0, 64));
@@ -1215,7 +1216,7 @@ public class TuioDemo : Form, TuioListener
                         if (bytesRead > 0)
                         {
                             string message = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-                            ProcessLoginMessage(message);
+                            ProcessLoginMessage(message); // Pass the message to your display logic
                         }
                     }
                 }
@@ -1233,12 +1234,9 @@ public class TuioDemo : Form, TuioListener
         }
     }
 
-    private bool messageDisplayed = false; // Flag to track if a message has been displayed
-
-    // Show message only if TUIO object 4 is present and no message has been displayed
-    private async void ProcessLoginMessage(string message)
+    private void ProcessLoginMessage(string message)
     {
-        if (latestIdIsFour && !messageDisplayed)
+        if (!messageDisplayed)
         {
             messageDisplayed = true;
 
@@ -1247,18 +1245,16 @@ public class TuioDemo : Form, TuioListener
                 ShowMessageOnScreen("Loading... Searching for user", Color.Orange);
             }));
 
-            // Wait for 5 seconds
-            await Task.Delay(5000);
-
-            // Now show the actual message based on login or registration status
-            this.Invoke(new Action(() =>
+            Task.Run(async () =>
             {
-                string displayMessage = message == "User registered" ? "A new user has been registered." : "User has successfully logged in.";
-                Color messageColor = message == "User registered" ? Color.Green : Color.Blue;
+                await Task.Delay(5000); // Simulate processing time
 
-                ShowMessageOnScreen(displayMessage, messageColor); // Show the final message
-                MessageBox.Show(displayMessage, message == "User registered" ? "Registration" : "Login", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }));
+                this.Invoke(new Action(() =>
+                {
+                    ShowMessageOnScreen(message, Color.Blue); // Display the login message
+                    MessageBox.Show(message, "Login", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }));
+            });
         }
     }
 
@@ -1329,7 +1325,6 @@ public class TuioDemo : Form, TuioListener
                 using (NetworkStream stream = client.GetStream())
                 {
                     byte[] buffer = new byte[1024];
-                    StringBuilder messageBuilder = new StringBuilder();
                     while (true)
                     {
                         if (stream.DataAvailable)
@@ -1337,26 +1332,8 @@ public class TuioDemo : Form, TuioListener
                             int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
                             if (bytesRead > 0)
                             {
-                                string chunk = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                                messageBuilder.Append(chunk);
-
-                                // Check if the message contains the newline character
-                                if (messageBuilder.ToString().Contains("\n"))
-                                {
-                                    // Split the message at \n and process
-                                    string[] messages = messageBuilder.ToString().Split('\n');
-
-                                    foreach (string msg in messages)
-                                    {
-                                        if (!string.IsNullOrWhiteSpace(msg))
-                                        {
-                                            MessageBox.Show($"{serverName}: Received -> {msg}");
-                                        }
-                                    }
-
-                                    // Reset the builder for the next message
-                                    messageBuilder.Clear();
-                                }
+                                string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                                MessageBox.Show("{message}");
                             }
                         }
                         await Task.Delay(100);  // Delay to reduce CPU usage
@@ -1369,7 +1346,6 @@ public class TuioDemo : Form, TuioListener
             MessageBox.Show($"{serverName}: Error - {ex.Message}");
         }
     }
-
 
 
 }
