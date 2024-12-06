@@ -1329,6 +1329,7 @@ public class TuioDemo : Form, TuioListener
                 using (NetworkStream stream = client.GetStream())
                 {
                     byte[] buffer = new byte[1024];
+                    StringBuilder messageBuilder = new StringBuilder();
                     while (true)
                     {
                         if (stream.DataAvailable)
@@ -1336,8 +1337,26 @@ public class TuioDemo : Form, TuioListener
                             int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
                             if (bytesRead > 0)
                             {
-                                string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                                MessageBox.Show($"{serverName}: Received -> {message}");
+                                string chunk = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                                messageBuilder.Append(chunk);
+
+                                // Check if the message contains the newline character
+                                if (messageBuilder.ToString().Contains("\n"))
+                                {
+                                    // Split the message at \n and process
+                                    string[] messages = messageBuilder.ToString().Split('\n');
+
+                                    foreach (string msg in messages)
+                                    {
+                                        if (!string.IsNullOrWhiteSpace(msg))
+                                        {
+                                            MessageBox.Show($"{serverName}: Received -> {msg}");
+                                        }
+                                    }
+
+                                    // Reset the builder for the next message
+                                    messageBuilder.Clear();
+                                }
                             }
                         }
                         await Task.Delay(100);  // Delay to reduce CPU usage
@@ -1350,6 +1369,7 @@ public class TuioDemo : Form, TuioListener
             MessageBox.Show($"{serverName}: Error - {ex.Message}");
         }
     }
+
 
 
 }
