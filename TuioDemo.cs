@@ -56,10 +56,6 @@ public class TuioDemo : Form, TuioListener
     bool admin = false;
     bool facelogin = false;
     int OveralCart = 0;
-    int OveralCart3 = 0;
-    int OveralCart5 = 0;
-    int OveralCart6 = 0;
-    bool isId17Present = false;
     private float rotationAngle = 0f; // Class-level variable for rotation
 
 
@@ -332,8 +328,6 @@ public class TuioDemo : Form, TuioListener
                      centerX - centralTextSize.Width / 2, centerY - centralTextSize.Height / 2); // Actual text
     }
 
-
-
     private void DrawAboutUsPage(Graphics g)
     {
         try
@@ -549,53 +543,77 @@ public class TuioDemo : Form, TuioListener
 
     private void Stock(Graphics g, TuioObject tobj)
     {
-        if (isAdmin)
+        switch (isAdmin)
         {
-            switch (tobj.SymbolID)
-            {
-                case 3: // Sunblock
-                    if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
-                    {
-                        stock["sunblock"]++;
-                        itemAdded = true;
-                        itemRemoved = false;
-                    }
-                    else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && stock["sunblock"] > 0)
-                    {
-                        stock["sunblock"]--;
-                        itemRemoved = true;
-                        itemAdded = false;
-                    }
-                    else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
-                    {
-                        itemAdded = false;
-                        itemRemoved = false;
-                    }
-                    break;
+            // admin
+            case true:
+                switch (tobj.SymbolID)
+                {
+                    case 3:
+                        if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
+                        {
+                            stock["sunblock"]++;
+                            itemAdded = true;
+                            itemRemoved = false;
+                        }
+                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && stock["sunblock"] > 0)
+                        {
+                            stock["sunblock"]--;
+                            itemRemoved = true;
+                            itemAdded = false;
+                        }
+                        else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
+                        {
+                            itemAdded = false;
+                            itemRemoved = false;
+                        }
+                        break;
+                    case 5:
+                        if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
+                        {
+                            stock["dermatique"]++;
+                            itemAdded = true;
+                            itemRemoved = false;
+                        }
+                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && stock["dermatique"] > 0)
+                        {
+                            stock["dermatique"]--;
+                            itemRemoved = true;
+                            itemAdded = false;
+                        }
+                        else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
+                        {
+                            itemAdded = false;
+                            itemRemoved = false;
+                        }
+                        break;
+                    case 6:
+                        if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
+                        {
+                            stock["123"]++;
+                            itemAdded = true;
+                            itemRemoved = false;
+                        }
+                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && stock["123"] > 0)
+                        {
+                            stock["123"]--;
+                            itemRemoved = true;
+                            itemAdded = false;
+                        }
+                        else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
+                        {
+                            itemAdded = false;
+                            itemRemoved = false;
+                        }
+                        break;
+                }
+                break;
+            //customer
+            case false:
 
-                case 5: // Dermatique
-                    if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
-                    {
-                        stock["dermatique"]++;
-                        itemAdded = true;
-                        itemRemoved = false;
-                    }
-                    else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && stock["dermatique"] > 0)
-                    {
-                        stock["dermatique"]--;
-                        itemRemoved = true;
-                        itemAdded = false;
-                    }
-                    else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
-                    {
-                        itemAdded = false;
-                        itemRemoved = false;
-                    }
-                    break;
-            }
+                break;
         }
     }
-
     private bool latestIdIsOne = false;
     private void drawmenu()
     {
@@ -629,9 +647,9 @@ public class TuioDemo : Form, TuioListener
     {
         bool isId12Present = false;
         bool isId3Present = false;
-      
+        bool isId17Present = false;
         int highlightedIndex = -1;
-
+        bool aboutus = false;
 
         drawmenu();
         Graphics g = pevent.Graphics;
@@ -671,96 +689,87 @@ public class TuioDemo : Form, TuioListener
                 foreach (TuioObject tobj in objectList.Values)
                 {
                     if (tobj.SymbolID == 3) isId3Present = true;
-                   
+                    if (tobj.SymbolID == 17) isId17Present = true;
                 }
                 foreach (TuioObject tobj in objectList.Values)
                 {
                     if (tobj.SymbolID == 5) isId3Present = true;
-                   
+                    if (tobj.SymbolID == 17) isId17Present = true;
                 }
                 foreach (TuioObject tobj in objectList.Values)
                 {
                     if (tobj.SymbolID == 6) isId3Present = true;
-                   
+                    if (tobj.SymbolID == 17) isId17Present = true;
                 }
                 foreach (TuioObject tobj in objectList.Values)
                 {
-                    if (tobj.SymbolID == 3 || tobj.SymbolID == 5 || tobj.SymbolID == 6)
+                    if (tobj.SymbolID == 3)
                     {
-                        if (tobj.SymbolID == 3)
+                        isId3Present = true;
+                        if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
                         {
-                            // Update OverallCart based on the angle
-                            if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
-                            {
-                                OveralCart++;
-                                OveralCart3++;
-                                itemAdded = true;
-                                itemRemoved = false;
-                            }
-                            else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && OveralCart > 0)
-                            {
-                                OveralCart--;
-                                OveralCart3--;
-                                itemRemoved = true;
-                                itemAdded = false;
-                            }
-                            else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
-                            {
-                                itemAdded = false;
-                                itemRemoved = false;
-                            }
+                            OveralCart++;
+                            itemAdded = true;
+                            itemRemoved = false;
                         }
-                        else if (tobj.SymbolID == 5)
+                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && OveralCart > 0)
                         {
-                            // Update OverallCart based on the angle
-                            if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
-                            {
-                                OveralCart++;
-                                OveralCart5++;
-                                itemAdded = true;
-                                itemRemoved = false;
-                            }
-                            else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && OveralCart > 0)
-                            {
-                                OveralCart--;
-                                OveralCart5--;
-                                itemRemoved = true;
-                                itemAdded = false;
-                            }
-                            else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
-                            {
-                                itemAdded = false;
-                                itemRemoved = false;
-                            }
+                            OveralCart--;
+                            itemRemoved = true;
+                            itemAdded = false;
                         }
-                        else if (tobj.SymbolID == 6)
+                        else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
                         {
-                            // Update OverallCart based on the angle
-                            if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
-                            {
-                                OveralCart++;
-                                OveralCart6++;
-                                itemAdded = true;
-                                itemRemoved = false;
-                            }
-                            else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && OveralCart > 0)
-                            {
-                                OveralCart--;
-                                OveralCart6--;
-                                itemRemoved = true;
-                                itemAdded = false;
-                            }
-                            else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
-                            {
-                                itemAdded = false;
-                                itemRemoved = false;
-                            }
+                            itemAdded = false;
+                            itemRemoved = false;
                         }
-
-
-
                     }
-
+                    if (tobj.SymbolID == 6)
+                    {
+                        isId3Present = true;
+                        if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
+                        {
+                            OveralCart++;
+                            itemAdded = true;
+                            itemRemoved = false;
+                        }
+                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && OveralCart > 0)
+                        {
+                            OveralCart--;
+                            itemRemoved = true;
+                            itemAdded = false;
+                        }
+                        else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
+                        {
+                            itemAdded = false;
+                            itemRemoved = false;
+                        }
+                    }
+                    if (tobj.SymbolID == 5)
+                    {
+                        isId3Present = true;
+                        if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
+                        {
+                            OveralCart++;
+                            itemAdded = true;
+                            itemRemoved = false;
+                        }
+                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && OveralCart > 0)
+                        {
+                            OveralCart--;
+                            itemRemoved = true;
+                            itemAdded = false;
+                        }
+                        else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
+                        {
+                            itemAdded = false;
+                            itemRemoved = false;
+                        }
+                    }
+                    if (tobj.SymbolID == 17)
+                    {
+                        isId17Present = true;
+                    }
                 }
                 foreach (TuioObject tobj in objectList.Values)
                 {
@@ -769,10 +778,9 @@ public class TuioDemo : Form, TuioListener
                     int size = height / 10;
                     latestId = tobj.SymbolID;
 
-                    if (tobj.SymbolID == 3 && flagg)
+                    if (tobj.SymbolID == 3 && isId17Present && flagg)
                     {
                         flaglogin = false;
-                       
 
                         DrawSunblockInfo(g);
                     }
@@ -784,7 +792,7 @@ public class TuioDemo : Form, TuioListener
                     }
                     else if (tobj.SymbolID == 2 && flagg)
                     {
-                        flaglogin = false;
+                      //  flaglogin = false;
 
                         DrawMenuItems(g, selectedRectangleIndex: -1, flag: false, borderColor: Color.Transparent);
                     }
@@ -804,7 +812,7 @@ public class TuioDemo : Form, TuioListener
                         // flagg = true;
 
                     }
-                    else if (tobj.SymbolID == 5  && flagg)
+                    else if (tobj.SymbolID == 5 && isId17Present && flagg)
                     {
                         flaglogin = false;
 
@@ -835,7 +843,7 @@ public class TuioDemo : Form, TuioListener
 
                         DrawMenuItems(g, selectedRectangleIndex: 1, flag: true, borderColor: Color.Green);
                     }
-                    else if (tobj.SymbolID == 6  && flagg)
+                    else if (tobj.SymbolID == 6 && isId17Present && flagg)
                     {
                         flaglogin = false;
 
@@ -846,10 +854,6 @@ public class TuioDemo : Form, TuioListener
                         flaglogin = false;
 
                         DrawMenuItems(g, selectedRectangleIndex: 2, flag: true, borderColor: Color.Green);
-                    }
-                    else if (tobj.SymbolID == 13)
-                    {
-                        DrawCrudPage(g);
                     }
                     else
                     {
@@ -902,7 +906,7 @@ public class TuioDemo : Form, TuioListener
                         switch (selectedSliceName)
                         {
                             case "About Us":
-                                //aboutus = true;
+                                aboutus = true;
                                 DrawAboutUsPage(g);
                                 latestId = 11; // Update latestId when SymbolID 17 is detected
                                 break;
@@ -918,10 +922,10 @@ public class TuioDemo : Form, TuioListener
 
                                 break;
                             case "Cart":
-                                DrawCrudPage(g);
+                                OpenCartPage();
                                 break;
                             case "Instructions":
-                                //OpenInstructionsPage();
+                                OpenInstructionsPage();
                                 break;
                             default:
                                 // Default action if needed
@@ -935,16 +939,22 @@ public class TuioDemo : Form, TuioListener
 
         if (objectList.Count == 0)
         {
+
             // MessageBox.Show("Received data:\n" + msg);
             if (latestId == 4)
             {
                 DrawLoginScreen(g);
             }
-            else if (latestId == 3 && flagg)
+            else if(latestId == 0)
+            {
+                DrawHomePage(g);
+
+            }
+            else if (latestId == 3 && isId17Present && flagg)
             {
                 DrawSunblockInfo(g);
             }
-            else if (latestId == 3 && flagg)
+            else if (latestId == 3 && !isId17Present && flagg)
             {
                 DrawMenuItems(g, selectedRectangleIndex: -1, flag: false, borderColor: Color.Transparent);
             }
@@ -954,7 +964,7 @@ public class TuioDemo : Form, TuioListener
             }
             else if (latestId == 5 && flagg)
             {
-                DrawDermatiqueinfo(g);
+                DrawMenuItems(g, selectedRectangleIndex: -1, flag: false, borderColor: Color.Transparent);
             }
             else if (latestId == 6 && flagg)
             {
@@ -979,10 +989,6 @@ public class TuioDemo : Form, TuioListener
                 g.DrawImage(backgroundImage, 0, 0, width, height);
 
                 DrawCircularMenu(g, centerX, centerY, radius, highlightedIndex);
-            }
-            else if (latestId == 13)
-            {
-                DrawCrudPage(g);
             }
             else if (latestId == 10)
             {
@@ -1076,16 +1082,47 @@ public class TuioDemo : Form, TuioListener
             DrawMenuItems(g, selectedRectangleIndex: -1, flag: false, borderColor: Color.Transparent);
         }
     }
+    private void OpenAboutUsPage()
+    {
+        // Code to open the "About Us" page
+        Console.WriteLine("Opening About Us Page");
+    }
+
+    private void OpenProductsPage()
+    {
+        // Code to open the "Our Products" page
+        Console.WriteLine("Opening Our Products Page");
+    }
+
+    private void OpenHomePage()
+    {
+        // Code to open the "Home Page"
+        Console.WriteLine("Opening Home Page");
+    }
+
+    private void OpenCartPage()
+    {
+        // Code to open the "Cart" page
+        Console.WriteLine("Opening Cart Page");
+    }
+
+    private void OpenInstructionsPage()
+    {
+        // Code to open the "Instructions" page
+        Console.WriteLine("Opening Instructions Page");
+    }
+
     private void DrawSunblockInfo(Graphics g)
     {
         try
         {
-            
-                using (Image bgImage = Image.FromFile("plain_bk.png"))
+            if (File.Exists(backgroundPath))
+            {
+                using (Image backgroundImg = Image.FromFile(backgroundPath))
                 {
-                    g.DrawImage(bgImage, new Rectangle(0, 0, width, height));
+                    g.DrawImage(backgroundImg, new Rectangle(0, 0, width, height));
                 }
-            
+            }
 
             Rectangle rect = new Rectangle(150, 165, 400, 500);
             Color rectColor = Color.FromArgb(255, 234, 233, 239);
@@ -1114,20 +1151,7 @@ public class TuioDemo : Form, TuioListener
                     g.DrawImage(img, new Rectangle(width - 600, 50, 400, 600));
                 }
             }
-            string cartText = $"Overall Cart: {OveralCart3}";
-            using (Font cartFont = new Font("Arial", 16, FontStyle.Bold))
-            using (SolidBrush cartBrush = new SolidBrush(Color.Black))
-            {
-                g.DrawString(cartText, cartFont, cartBrush, new PointF(20, 20)); // Adjust the position as needed
-            }
-            string cartTextt = $"allcartitems: {OveralCart}";
-            using (Font cartFont = new Font("Arial", 16, FontStyle.Bold))
-            using (SolidBrush cartBrush = new SolidBrush(Color.Black))
-            {
-                g.DrawString(cartTextt, cartFont, cartBrush, new PointF(50, 50)); // Adjust the position as needed
-            }
         }
-
         catch (Exception ex)
         {
             Console.WriteLine("Error drawing sunblock info: " + ex.Message);
@@ -1340,12 +1364,13 @@ public class TuioDemo : Form, TuioListener
     {
         try
         {
-           
-                using (Image bgImage = Image.FromFile("plain_bk.png"))
+            if (File.Exists(backgroundPath))
+            {
+                using (Image backgroundImg = Image.FromFile(backgroundPath))
                 {
-                    g.DrawImage(bgImage, new Rectangle(0, 0, width, height));
+                    g.DrawImage(backgroundImg, new Rectangle(0, 0, width, height));
                 }
-            
+            }
 
             Rectangle rect = new Rectangle(150, 165, 400, 500);
             Color rectColor = Color.FromArgb(255, 234, 233, 239);
@@ -1371,18 +1396,6 @@ public class TuioDemo : Form, TuioListener
                 {
                     g.DrawImage(img, new Rectangle(width - 600, 50, 400, 600));
                 }
-            }
-            string cartText = $"this product cart: {OveralCart5}";
-            using (Font cartFont = new Font("Arial", 16, FontStyle.Bold))
-            using (SolidBrush cartBrush = new SolidBrush(Color.Black))
-            {
-                g.DrawString(cartText, cartFont, cartBrush, new PointF(20, 20)); // Adjust the position as needed
-            }
-            string cartTextt = $"allcartitems: {OveralCart5}";
-            using (Font cartFont = new Font("Arial", 16, FontStyle.Bold))
-            using (SolidBrush cartBrush = new SolidBrush(Color.Black))
-            {
-                g.DrawString(cartTextt, cartFont, cartBrush, new PointF(50, 50)); // Adjust the position as needed
             }
         }
         catch (Exception ex)
@@ -1671,254 +1684,6 @@ public class TuioDemo : Form, TuioListener
         }
 
     }
-    private void DrawCrudPage(Graphics g)
-    {
-        try
-        {
-            // Background with a gradient effect
-            using (LinearGradientBrush backgroundBrush = new LinearGradientBrush(
-                new Rectangle(0, 0, width, height),
-                Color.FromArgb(255, 240, 248, 255),
-                Color.FromArgb(255, 173, 216, 230),
-                LinearGradientMode.Vertical))
-            {
-                g.FillRectangle(backgroundBrush, new Rectangle(0, 0, width, height));
-            }
-
-            // Title with a shadow effect
-            string title = "Your Shopping Cart";
-            string backgroundImagePath = "about_us_bgg.jpg"; // Replace with your actual background image path
-            if (File.Exists(backgroundImagePath))
-            {
-                using (Image bgImage = Image.FromFile(backgroundImagePath))
-                {
-                    g.DrawImage(bgImage, new Rectangle(0, 0, width, height));
-                }
-            }
-            using (Font titleFont = new Font("Arial", 32, FontStyle.Bold))
-            using (Brush shadowBrush = new SolidBrush(Color.Gray))
-            using (Brush titleBrush = new SolidBrush(Color.DarkSlateBlue))
-            {
-                SizeF titleSize = g.MeasureString(title, titleFont);
-                PointF titleLocation = new PointF((width - titleSize.Width) / 2, 30);
-
-                // Shadow for depth
-                g.DrawString(title, titleFont, shadowBrush, new PointF(titleLocation.X + 3, titleLocation.Y + 3));
-                g.DrawString(title, titleFont, titleBrush, titleLocation);
-            }
-
-            // Card-style display for each product
-            int startX = 100;
-            int startY = 150;
-            int spacingY = 220;
-
-            // Display Sunblock product
-            if (OveralCart3 > 0)
-            {
-                DrawProductCard(g, startX, startY, "Sunblock", OveralCart3, imagePaths[0]);
-                startY += spacingY;
-            }
-
-            // Display Dermatique product
-            if (OveralCart5 > 0)
-            {
-                DrawProductCard(g, startX, startY, "Dermatique", OveralCart5, imagePaths[1]);
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Error drawing CRUD page: {ex.Message}");
-        }
-    }
-
-    private void DrawProductCard(Graphics g, int startX, int startY, string productName, int productCount, string productImagePath)
-    {
-        try
-        {
-            // Card background with rounded corners
-            Rectangle cardRect = new Rectangle(startX, startY, 700, 180);
-            using (GraphicsPath cardPath = new GraphicsPath())
-            {
-                int cornerRadius = 20;
-                cardPath.AddArc(cardRect.X, cardRect.Y, cornerRadius, cornerRadius, 180, 90);
-                cardPath.AddArc(cardRect.Right - cornerRadius, cardRect.Y, cornerRadius, cornerRadius, 270, 90);
-                cardPath.AddArc(cardRect.Right - cornerRadius, cardRect.Bottom - cornerRadius, cornerRadius, cornerRadius, 0, 90);
-                cardPath.AddArc(cardRect.X, cardRect.Bottom - cornerRadius, cornerRadius, cornerRadius, 90, 90);
-                cardPath.CloseFigure();
-
-                using (SolidBrush cardBrush = new SolidBrush(Color.White))
-                {
-                    g.FillPath(cardBrush, cardPath);
-                }
-
-                using (Pen borderPen = new Pen(Color.FromArgb(173, 216, 230), 3))
-                {
-                    g.DrawPath(borderPen, cardPath);
-                }
-            }
-
-            // Product image
-            if (File.Exists(productImagePath))
-            {
-                using (Image productImage = Image.FromFile(productImagePath))
-                {
-                    g.DrawImage(productImage, new Rectangle(startX + 20, startY + 15, 150, 150));
-                }
-            }
-
-            // Product name and quantity
-            string productInfo = $"{productName}\nQuantity: {productCount}";
-            using (Font productFont = new Font("Arial", 14, FontStyle.Bold))
-            using (Brush productBrush = new SolidBrush(Color.DarkSlateGray))
-            {
-                g.DrawString(productInfo, productFont, productBrush, new PointF(startX + 200, startY + 30));
-            }
-
-            // "Delete" button
-            Rectangle deleteButtonRect = new Rectangle(startX + 500, startY + 40, 150, 40);
-            DrawModernButton(g, deleteButtonRect, "Delete", Color.IndianRed);
-
-            // "Update" button
-            Rectangle updateButtonRect = new Rectangle(startX + 500, startY + 100, 150, 40);
-            DrawModernButton(g, updateButtonRect, "Update", Color.MediumSeaGreen);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error displaying product card: {ex.Message}");
-        }
-    }
-
-    private void DrawModernButton(Graphics g, Rectangle buttonRect, string buttonText, Color buttonColor)
-    {
-        using (GraphicsPath buttonPath = new GraphicsPath())
-        {
-            int cornerRadius = 10;
-            buttonPath.AddArc(buttonRect.X, buttonRect.Y, cornerRadius, cornerRadius, 180, 90);
-            buttonPath.AddArc(buttonRect.Right - cornerRadius, buttonRect.Y, cornerRadius, cornerRadius, 270, 90);
-            buttonPath.AddArc(buttonRect.Right - cornerRadius, buttonRect.Bottom - cornerRadius, cornerRadius, cornerRadius, 0, 90);
-            buttonPath.AddArc(buttonRect.X, buttonRect.Bottom - cornerRadius, cornerRadius, cornerRadius, 90, 90);
-            buttonPath.CloseFigure();
-
-            using (LinearGradientBrush buttonBrush = new LinearGradientBrush(
-                buttonRect,
-                buttonColor,
-                Color.White,
-                LinearGradientMode.Vertical))
-            {
-                g.FillPath(buttonBrush, buttonPath);
-            }
-
-            using (Pen borderPen = new Pen(Color.DarkGray, 2))
-            {
-                g.DrawPath(borderPen, buttonPath);
-            }
-
-            using (Font buttonFont = new Font("Arial", 12, FontStyle.Bold))
-            using (Brush textBrush = new SolidBrush(Color.White))
-            {
-                SizeF textSize = g.MeasureString(buttonText, buttonFont);
-                PointF textLocation = new PointF(
-                    buttonRect.X + (buttonRect.Width - textSize.Width) / 2,
-                    buttonRect.Y + (buttonRect.Height - textSize.Height) / 2);
-                g.DrawString(buttonText, buttonFont, textBrush, textLocation);
-            }
-        }
-    }
-
-
-    private void DisplayProductWithButtons(Graphics g, int startX, int startY, string productName, int productCount, string productImagePath)
-    {
-        try
-        {
-            // Draw product image
-            if (File.Exists(productImagePath))
-            {
-                using (Image productImage = Image.FromFile(productImagePath))
-                {
-                    g.DrawImage(productImage, new Rectangle(startX, startY, 150, 150)); // Adjust size and position
-                }
-            }
-
-            // Draw product name and count
-            string productInfo = $"{productName}\nCount: {productCount}";
-            using (Font infoFont = new Font("Arial", 14))
-            using (Brush infoBrush = new SolidBrush(Color.Black))
-            {
-                g.DrawString(productInfo, infoFont, infoBrush, new PointF(startX + 180, startY + 30)); // Adjust position
-            }
-
-            // Draw "Delete" button
-            Rectangle deleteButtonRect = new Rectangle(startX + 350, startY + 30, 100, 40);
-            DrawRoundedButton(g, deleteButtonRect, "Delete");
-
-            // Draw "Update" button
-            Rectangle updateButtonRect = new Rectangle(startX + 350, startY + 100, 100, 40);
-            DrawRoundedButton(g, updateButtonRect, "Update");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error displaying product: {ex.Message}");
-        }
-    }
-
-    private void DisplayProductInfo(Graphics g, int startX, int startY, string productName, int productCount, string productImagePath)
-    {
-        // Display product image
-        if (File.Exists(productImagePath))
-        {
-            using (Image productImage = Image.FromFile(productImagePath))
-            {
-                g.DrawImage(productImage, new Rectangle(startX, startY, 150, 150)); // Adjust size and position
-            }
-        }
-
-        // Display product name and count
-        string productInfo = $"{productName}\nCount: {productCount}";
-        using (Font infoFont = new Font("Arial", 14))
-        using (Brush infoBrush = new SolidBrush(Color.Black))
-        {
-            g.DrawString(productInfo, infoFont, infoBrush, new PointF(startX + 200, startY + 50)); // Adjust position
-        }
-    }
-
-
-    private void DrawButton(Graphics g, Rectangle buttonRect, string buttonText, Color buttonColor)
-    {
-        using (GraphicsPath path = new GraphicsPath())
-        {
-            int cornerRadius = 15;
-            path.AddArc(buttonRect.X, buttonRect.Y, cornerRadius, cornerRadius, 180, 90);
-            path.AddArc(buttonRect.X + buttonRect.Width - cornerRadius, buttonRect.Y, cornerRadius, cornerRadius, 270, 90);
-            path.AddArc(buttonRect.X + buttonRect.Width - cornerRadius, buttonRect.Y + buttonRect.Height - cornerRadius, cornerRadius, cornerRadius, 0, 90);
-            path.AddArc(buttonRect.X, buttonRect.Y + buttonRect.Height - cornerRadius, cornerRadius, cornerRadius, 90, 90);
-            path.CloseAllFigures();
-
-            // Fill button
-            using (SolidBrush brush = new SolidBrush(buttonColor))
-            {
-                g.FillPath(brush, path);
-            }
-
-            // Draw border
-            using (Pen pen = new Pen(Color.Black, 2))
-            {
-                g.DrawPath(pen, path);
-            }
-
-            // Draw text
-            using (Font font = new Font("Arial", 12, FontStyle.Bold))
-            using (SolidBrush textBrush = new SolidBrush(Color.Black))
-            {
-                SizeF textSize = g.MeasureString(buttonText, font);
-                PointF textLocation = new PointF(
-                    buttonRect.X + (buttonRect.Width - textSize.Width) / 2,
-                    buttonRect.Y + (buttonRect.Height - textSize.Height) / 2
-                );
-                g.DrawString(buttonText, font, textBrush, textLocation);
-            }
-        }
-    }
-
 
     private void DrawRoundedButton(Graphics g, Rectangle buttonRect, string buttonText)
     {
@@ -2124,7 +1889,6 @@ public class TuioDemo : Form, TuioListener
             });
         }
     }
-   
 
     private void ShowMessageOnScreen(string text, Color color)
     {
