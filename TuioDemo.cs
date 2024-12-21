@@ -9,8 +9,6 @@ using System.IO;
 using System.Drawing.Drawing2D;
 using System.Threading.Tasks;
 using System.Net.Sockets;
-
-
 using System.Text;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -58,6 +56,7 @@ public class TuioDemo : Form, TuioListener
     bool admin = false;
     bool facelogin = false;
     int OveralCart = 0;
+    private float rotationAngle = 0f; // Class-level variable for rotation
 
 
     bool flagloginbluetooth = false;
@@ -108,9 +107,7 @@ public class TuioDemo : Form, TuioListener
     new CircularMenuItem("Home Page", ColorTranslator.FromHtml("#F694C1")),
     new CircularMenuItem("Cart", ColorTranslator.FromHtml("#EDE7B1")),
     new CircularMenuItem("Instructions", ColorTranslator.FromHtml("#A9DEF9"))
-};
-
-
+    };
     public TuioDemo(int port)
     {
         verbose = false;
@@ -208,14 +205,15 @@ public class TuioDemo : Form, TuioListener
             Invalidate(); // Refresh GUI to show the admin menu
         }
     }
-    private void DrawCircularMenu(Graphics g, int centerX, int centerY, int radius, int rotationAngle = 0)
+    private void DrawCircularMenu(Graphics g, int centerX, int centerY, int radius, int highlightedIndex = -1)
     {
         int itemCount = circularMenuItems.Count; // Number of items in the menu
-        double angleStep = 360.0 / itemCount;    // Angle per menu item
-        float gapAngle = 2;                      // Gap between menu items
-        Font font = new Font("Arial", 18, FontStyle.Bold); // Larger font for labels
-        Brush textBrush = new SolidBrush(ColorTranslator.FromHtml("#4a4a4a")); // Darker gray for text
-        Pen linePen = new Pen(ColorTranslator.FromHtml("#4a4a4a"), 2); // Line for connectors
+        float angleStep = 360f / itemCount;      // Angle per menu item
+        float gapAngle = 2f;                     // Gap between menu items
+        Font font = new Font("Arial", 18, FontStyle.Bold); // Font for labels
+        Brush textBrush = new SolidBrush(ColorTranslator.FromHtml("#4a4a4a")); // Text color
+        Pen linePen = new Pen(ColorTranslator.FromHtml("#4a4a4a"), 2);         // Pen for connector lines
+        Pen highlightPen = new Pen(ColorTranslator.FromHtml("#FFA500"), 8);    // Highlight border (thicker width)
 
         string[] imagePaths = new string[]
         {
@@ -228,20 +226,33 @@ public class TuioDemo : Form, TuioListener
 
         for (int i = 0; i < itemCount; i++)
         {
-            // Calculate angles and positions
-            double startAngle = (i * angleStep + rotationAngle) % 360;
-            double midAngle = Math.PI * ((startAngle + angleStep / 2) / 180.0); // Midpoint in radians
+            // Calculate start and mid angles for the current slice
+            float startAngle = (i * angleStep) % 360;
+            float midAngle = (startAngle + angleStep / 2) % 360;
 
-            // Draw pie slice
+            // If this slice is highlighted, draw a wider border and expand the selection area
+            if (i == highlightedIndex)
+            {
+                using (Brush highlightBrush = new SolidBrush(Color.FromArgb(180, 255, 165, 0))) // Semi-transparent orange
+                {
+                    g.FillPie(highlightBrush, centerX - radius - 10, centerY - radius - 10, (radius + 10) * 2, (radius + 10) * 2,
+                              startAngle + gapAngle / 2, angleStep - gapAngle);
+                }
+                g.DrawPie(highlightPen, centerX - radius - 10, centerY - radius - 10, (radius + 10) * 2, (radius + 10) * 2,
+                          startAngle + gapAngle / 2, angleStep - gapAngle);
+            }
+
+            // Draw the pie slice
             using (Brush brush = new SolidBrush(circularMenuItems[i].Color))
             {
                 g.FillPie(brush, centerX - radius, centerY - radius, radius * 2, radius * 2,
-                          (float)(startAngle + gapAngle / 2), (float)(angleStep - gapAngle));
+                          startAngle + gapAngle / 2, angleStep - gapAngle);
             }
 
             // Calculate the center of the slice for image placement
-            int sliceCenterX = centerX + (int)((radius * 0.6) * Math.Cos(midAngle)); // Adjusted to 0.6 to move outward
-            int sliceCenterY = centerY + (int)((radius * 0.6) * Math.Sin(midAngle)); // Adjusted to 0.6 to move outward
+            double midRadians = Math.PI * midAngle / 180.0;
+            int sliceCenterX = centerX + (int)(radius * 0.6 * Math.Cos(midRadians)); // Adjusted to 0.6 to move images outward
+            int sliceCenterY = centerY + (int)(radius * 0.6 * Math.Sin(midRadians)); // Adjusted to 0.6 to move images outward
 
             // Draw image if available
             if (File.Exists(imagePaths[i]))
@@ -249,7 +260,7 @@ public class TuioDemo : Form, TuioListener
                 using (Image img = Image.FromFile(imagePaths[i]))
                 {
                     // Adjust the image size for "About Us"
-                    int imgSize = (i == 0) ? (int)(radius * 0.45) : (int)(radius * 0.35); // Slightly reduced size for "About Us"
+                    int imgSize = (i == 0) ? (int)(radius * 0.4) : (int)(radius * 0.35);
                     g.DrawImage(img, sliceCenterX - imgSize / 2, sliceCenterY - imgSize / 2, imgSize, imgSize);
                 }
             }
@@ -259,26 +270,25 @@ public class TuioDemo : Form, TuioListener
                 g.FillEllipse(Brushes.White, sliceCenterX - 20, sliceCenterY - 20, 40, 40);
             }
 
-            // Calculate the edge of the slice (outer radius)
-            int sliceEdgeX = centerX + (int)((radius) * Math.Cos(midAngle));
-            int sliceEdgeY = centerY + (int)((radius) * Math.Sin(midAngle));
+            // Calculate the edge of the slice (outer radius) for line connections
+            int sliceEdgeX = centerX + (int)(radius * Math.Cos(midRadians));
+            int sliceEdgeY = centerY + (int)(radius * Math.Sin(midRadians));
 
-            // Calculate the endpoint of the line based on the quarter
+            // Calculate line endpoint (to the side) based on the position of the slice
             int lineEndX, lineEndY = sliceEdgeY;
-
-            if (midAngle > Math.PI / 2 && midAngle < 3 * Math.PI / 2) // Left side (pink and green quarters)
+            if (midAngle > 90 && midAngle < 270) // Left side (pink and green quarters)
             {
-                lineEndX = sliceEdgeX - 100; // Extend line leftward
+                lineEndX = sliceEdgeX - 100; // Extend line to the left
             }
             else // Right side (blue and yellow quarters)
             {
-                lineEndX = sliceEdgeX + 100; // Extend line rightward
+                lineEndX = sliceEdgeX + 100; // Extend line to the right
             }
 
-            // Draw the line from the edge of the slice
+            // Draw the connector line from the slice edge to the line endpoint
             g.DrawLine(linePen, sliceEdgeX, sliceEdgeY, lineEndX, lineEndY);
 
-            // Draw a small circle at the end of the line
+            // Draw a small circle at the endpoint of the line
             g.FillEllipse(Brushes.Black, lineEndX - 5, lineEndY - 5, 10, 10);
 
             // Adjust text position based on the side
@@ -286,7 +296,7 @@ public class TuioDemo : Form, TuioListener
             SizeF textSize = g.MeasureString(labelText, font);
             int textOffsetX = 0;
 
-            if (midAngle > Math.PI / 2 && midAngle < 3 * Math.PI / 2) // Left side
+            if (midAngle > 90 && midAngle < 270) // Left side
             {
                 textOffsetX = -(int)textSize.Width - 15; // Place text to the left of the dot
             }
@@ -295,7 +305,7 @@ public class TuioDemo : Form, TuioListener
                 textOffsetX = 15; // Place text to the right of the dot
             }
 
-            // Enhance text visibility by adding a shadow
+            // Draw the label text with a shadow for better visibility
             g.DrawString(labelText, font, Brushes.White,
                          lineEndX + textOffsetX,
                          lineEndY - textSize.Height / 2 + 2); // Shadow effect
@@ -319,6 +329,144 @@ public class TuioDemo : Form, TuioListener
     }
 
 
+
+    private void DrawAboutUsPage(Graphics g)
+    {
+        try
+        {
+            // Background
+            string backgroundImagePath = "about_us_bg.jpg"; // Update with your actual image path
+            if (File.Exists(backgroundImagePath))
+            {
+                using (Image bgImage = Image.FromFile(backgroundImagePath))
+                {
+                    g.DrawImage(bgImage, new Rectangle(0, 0, width, height));
+                }
+            }
+
+            // Semi-transparent overlay for title and description
+            Rectangle overlayRect = new Rectangle(50, 50, width - 100, 200);
+            DrawRoundedRectangleWithShadow(g, overlayRect, Color.FromArgb(180, 220, 220, 220), 20, Color.Gray);
+
+            // Title - About Us
+            string title = "About Us";
+            using (Font titleFont = new Font("Verdana", 32, FontStyle.Bold))
+            using (Brush titleBrush = new SolidBrush(Color.Black)) // Dark Gray color for the title
+            {
+                g.DrawString(title, titleFont, titleBrush, new PointF(width / 2 - 100, 70));
+            }
+
+            // Description
+            string description = "Welcome to the Smart Pharmacy Shop!\n\n" +
+                "Our mission is to provide an innovative shopping experience using advanced technologies. " +
+                "With a combination of gesture recognition, object detection, and face recognition, " +
+                "we aim to make shopping seamless, informative, and enjoyable.\n\n" +
+                "Thank you for choosing us!";
+            using (Font descFont = new Font("Arial", 14))
+            using (Brush descBrush = new SolidBrush(Color.Black))
+            {
+                g.DrawString(description, descFont, descBrush, new RectangleF(overlayRect.X + 20, overlayRect.Y + 50, overlayRect.Width - 40, overlayRect.Height - 60));
+            }
+
+            // Team Section Header - Meet Our Team
+            string teamHeader = "Meet Our Team:";
+            using (Font teamFont = new Font("Arial", 20, FontStyle.Bold))
+            using (Brush teamBrush = new SolidBrush(Color.Black)) // Dark Gray color for the team header
+            {
+                g.DrawString(teamHeader, teamFont, teamBrush, new PointF(50, 280));
+            }
+
+            // Team Member Cards
+            string[] teamMembers = { "Tarek", "Farah", "Youssef", "Malak", "Roqaia", "Rawan" };
+            string[] descriptions = {
+         "Tarek - Software Engineer specializing in backend development.",
+         "Farah - UI/UX Designer creating intuitive user interfaces.",
+         "Youssef - Frontend Developer with a passion for web technologies.",
+         "Malak - Project Manager ensuring smooth delivery of projects.",
+         "Roqaia - Data Scientist analyzing trends and building models.",
+         "Rawan - QA Engineer dedicated to software quality."
+     };
+            bool[] isMale = { true, false, true, false, false, false }; // Gender of team members
+            string maleIconPath = "male.png";
+            string femaleIconPath = "female.png";
+
+            int cardWidth = 300;
+            int cardHeight = 200;
+            int startX = 250;
+            int startY = 320;
+            int spacingX = 50;
+            int spacingY = 30;
+
+            for (int i = 0; i < teamMembers.Length; i++)
+            {
+                int row = i / 3;
+                int col = i % 3;
+
+                int x = startX + col * (cardWidth + spacingX);
+                int y = startY + row * (cardHeight + spacingY);
+
+                Rectangle cardRect = new Rectangle(x, y, cardWidth, cardHeight);
+                DrawRoundedRectangleWithShadow(g, cardRect, Color.FromArgb(180, 169, 169, 169), 15, Color.Gray); // Reduced opacity and gray color
+
+                // Add icon
+                string iconPath = isMale[i] ? maleIconPath : femaleIconPath;
+                if (File.Exists(iconPath))
+                {
+                    using (Image icon = Image.FromFile(iconPath))
+                    {
+                        g.DrawImage(icon, new Rectangle(x + 10, y + 20, 40, 40));
+                    }
+                }
+
+                // Add name
+                using (Font nameFont = new Font("Arial", 14, FontStyle.Bold))
+                using (Brush nameBrush = new SolidBrush(Color.Black))
+                {
+                    g.DrawString(teamMembers[i], nameFont, nameBrush, new PointF(x + 60, y + 20));
+                }
+
+                // Add description
+                using (Font descFont = new Font("Arial", 12, FontStyle.Regular))
+                using (Brush descBrush = new SolidBrush(Color.Black))
+                {
+                    g.DrawString(descriptions[i], descFont, descBrush, new RectangleF(x + 10, y + 60, cardWidth - 20, cardHeight - 70));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error drawing About Us page: {ex.Message}");
+        }
+    }
+
+
+    private void DrawRoundedRectangleWithShadow(Graphics g, Rectangle rect, Color fillColor, int cornerRadius, Color shadowColor)
+    {
+        int shadowOffset = 5;
+        using (GraphicsPath path = new GraphicsPath())
+        {
+            int diameter = cornerRadius * 2;
+            path.AddArc(rect.X, rect.Y, diameter, diameter, 180, 90);
+            path.AddArc(rect.Right - diameter, rect.Y, diameter, diameter, 270, 90);
+            path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - diameter, diameter, diameter, 90, 90);
+            path.CloseFigure();
+
+            // Draw shadow
+            using (SolidBrush shadowBrush = new SolidBrush(Color.FromArgb(100, shadowColor)))
+            {
+                g.TranslateTransform(shadowOffset, shadowOffset);
+                g.FillPath(shadowBrush, path);
+                g.TranslateTransform(-shadowOffset, -shadowOffset);
+            }
+
+            // Fill rectangle
+            using (SolidBrush fillBrush = new SolidBrush(fillColor))
+            {
+                g.FillPath(fillBrush, path);
+            }
+        }
+    }
 
     public void updateTuioObject(TuioObject o)
     {
@@ -499,8 +647,11 @@ public class TuioDemo : Form, TuioListener
 
     protected override void OnPaintBackground(PaintEventArgs pevent)
     {
+        bool isId12Present = false;
         bool isId3Present = false;
         bool isId17Present = false;
+        int highlightedIndex = -1;
+
         drawmenu();
         Graphics g = pevent.Graphics;
         if (customer == true)
@@ -668,6 +819,10 @@ public class TuioDemo : Form, TuioListener
 
                         DrawDermatiqueinfo(g);
                     }
+                    else if (tobj.SymbolID == 11)
+                    {
+                        DrawAboutUsPage(g);
+                    }
                     else if (tobj.SymbolID == 10)
                     {
                         flaglogin = false;
@@ -680,7 +835,7 @@ public class TuioDemo : Form, TuioListener
                         g.DrawImage(backgroundImage, 0, 0, width, height);
 
                         // Call the DrawCircularMenu function
-                        DrawCircularMenu(g, centerX, centerY, radius);
+                        DrawCircularMenu(g, centerX, centerY, radius, highlightedIndex);
 
                     }
                     else if (tobj.SymbolID == 5 && flagg)
@@ -711,6 +866,33 @@ public class TuioDemo : Form, TuioListener
                         lastObjectPosition = new Point(ox, oy);
                     }
 
+                }
+
+            }
+            lock (objectList)
+            {
+                foreach (TuioObject tobj in objectList.Values)
+                {
+                    if (tobj.SymbolID == 12) // Detect if the object with SymbolID 12 is present
+                    {
+                        isId12Present = true;
+
+                        rotationAngle = (float)tobj.AngleDegrees; // Update rotation
+                        highlightedIndex = (int)((rotationAngle % 360) / (360f / circularMenuItems.Count));
+                        highlightedIndex = (highlightedIndex + circularMenuItems.Count) % circularMenuItems.Count; // Valid index
+                    }
+                }
+                if (isId12Present)
+                {
+                    int centerX = width / 2;
+                    int centerY = height / 2;
+                    int radius = 300;         // Radius of the circular menu
+                    Image backgroundImage = Image.FromFile("backmenu.png");  // Replace with the actual image path
+
+                    // Draw the background image to cover the full screen
+                    g.DrawImage(backgroundImage, 0, 0, width, height);
+
+                    DrawCircularMenu(g, centerX, centerY, radius, highlightedIndex);
                 }
 
             }
@@ -746,6 +928,35 @@ public class TuioDemo : Form, TuioListener
             else if (latestId == 1 && flagg || admin == true)
             {
                 ShowAdminMenu(g);
+            }
+            else if (latestId == 11)
+            {
+                DrawAboutUsPage(g);
+            }
+            else if (latestId == 12)
+            {
+                int centerX = width / 2;
+                int centerY = height / 2;
+                int radius = 300;         // Radius of the circular menu
+                Image backgroundImage = Image.FromFile("backmenu.png");  // Replace with the actual image path
+
+                // Draw the background image to cover the full screen
+                g.DrawImage(backgroundImage, 0, 0, width, height);
+
+                DrawCircularMenu(g, centerX, centerY, radius, highlightedIndex);
+            }
+            else if (latestId == 10)
+            {
+                int centerX = width / 2;
+                int centerY = height / 2;
+                int radius = 300;         // Radius of the circular menu
+                Image backgroundImage = Image.FromFile("backmenu.png");  // Replace with the actual image path
+
+                // Draw the background image to cover the full screen
+                g.DrawImage(backgroundImage, 0, 0, width, height);
+
+                // Call the DrawCircularMenu function
+                DrawCircularMenu(g, centerX, centerY, radius);
             }
             else if (latestId != 0)
             {
