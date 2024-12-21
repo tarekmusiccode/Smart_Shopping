@@ -9,8 +9,11 @@ using System.IO;
 using System.Drawing.Drawing2D;
 using System.Threading.Tasks;
 using System.Net.Sockets;
+
+
 using System.Text;
 using System.Collections.Concurrent;
+using System.Linq;
 public class TuioDemo : Form, TuioListener
 {
     private TuioClient client;
@@ -50,7 +53,14 @@ public class TuioDemo : Form, TuioListener
     bool loggedIn = false;
     bool itemAdded = false;
     bool itemRemoved = false;
+    bool customer = false;
     bool flaglogin = false;
+    bool admin = false;
+    bool facelogin = false;
+    int OveralCart = 0;
+
+
+    bool flagloginbluetooth = false;
     List<string> knownNames = new List<string>
     {
         "Tarek", "Farah", "Youssef", "Malak", "Roqaia", "Rawan", "Unknown"
@@ -77,6 +87,29 @@ public class TuioDemo : Form, TuioListener
         { "sunblock", 0 },
         { "dermatique", 0 }
     };
+    // Class for circular menu items
+    class CircularMenuItem
+    {
+        public string Name { get; }
+        public Color Color { get; }
+
+        public CircularMenuItem(string name, Color color)
+        {
+            Name = name;
+            Color = color;
+        }
+    }
+
+    // Circular menu items with specified colors
+    List<CircularMenuItem> circularMenuItems = new List<CircularMenuItem>
+{
+    new CircularMenuItem("About Us", ColorTranslator.FromHtml("#D3F8E2")),
+    new CircularMenuItem("Our Products", ColorTranslator.FromHtml("#E4C1F9")),
+    new CircularMenuItem("Home Page", ColorTranslator.FromHtml("#F694C1")),
+    new CircularMenuItem("Cart", ColorTranslator.FromHtml("#EDE7B1")),
+    new CircularMenuItem("Instructions", ColorTranslator.FromHtml("#A9DEF9"))
+};
+
 
     public TuioDemo(int port)
     {
@@ -175,6 +208,117 @@ public class TuioDemo : Form, TuioListener
             Invalidate(); // Refresh GUI to show the admin menu
         }
     }
+    private void DrawCircularMenu(Graphics g, int centerX, int centerY, int radius, int rotationAngle = 0)
+    {
+        int itemCount = circularMenuItems.Count; // Number of items in the menu
+        double angleStep = 360.0 / itemCount;    // Angle per menu item
+        float gapAngle = 2;                      // Gap between menu items
+        Font font = new Font("Arial", 18, FontStyle.Bold); // Larger font for labels
+        Brush textBrush = new SolidBrush(ColorTranslator.FromHtml("#4a4a4a")); // Darker gray for text
+        Pen linePen = new Pen(ColorTranslator.FromHtml("#4a4a4a"), 2); // Line for connectors
+
+        string[] imagePaths = new string[]
+        {
+        "aboutus.png",
+        "ourproducts.png",
+        "home (2).png",
+        "cart.png",
+        "instructions.png"
+        };
+
+        for (int i = 0; i < itemCount; i++)
+        {
+            // Calculate angles and positions
+            double startAngle = (i * angleStep + rotationAngle) % 360;
+            double midAngle = Math.PI * ((startAngle + angleStep / 2) / 180.0); // Midpoint in radians
+
+            // Draw pie slice
+            using (Brush brush = new SolidBrush(circularMenuItems[i].Color))
+            {
+                g.FillPie(brush, centerX - radius, centerY - radius, radius * 2, radius * 2,
+                          (float)(startAngle + gapAngle / 2), (float)(angleStep - gapAngle));
+            }
+
+            // Calculate the center of the slice for image placement
+            int sliceCenterX = centerX + (int)((radius * 0.6) * Math.Cos(midAngle)); // Adjusted to 0.6 to move outward
+            int sliceCenterY = centerY + (int)((radius * 0.6) * Math.Sin(midAngle)); // Adjusted to 0.6 to move outward
+
+            // Draw image if available
+            if (File.Exists(imagePaths[i]))
+            {
+                using (Image img = Image.FromFile(imagePaths[i]))
+                {
+                    // Adjust the image size for "About Us"
+                    int imgSize = (i == 0) ? (int)(radius * 0.45) : (int)(radius * 0.35); // Slightly reduced size for "About Us"
+                    g.DrawImage(img, sliceCenterX - imgSize / 2, sliceCenterY - imgSize / 2, imgSize, imgSize);
+                }
+            }
+            else
+            {
+                // Fallback: Draw a placeholder circle
+                g.FillEllipse(Brushes.White, sliceCenterX - 20, sliceCenterY - 20, 40, 40);
+            }
+
+            // Calculate the edge of the slice (outer radius)
+            int sliceEdgeX = centerX + (int)((radius) * Math.Cos(midAngle));
+            int sliceEdgeY = centerY + (int)((radius) * Math.Sin(midAngle));
+
+            // Calculate the endpoint of the line based on the quarter
+            int lineEndX, lineEndY = sliceEdgeY;
+
+            if (midAngle > Math.PI / 2 && midAngle < 3 * Math.PI / 2) // Left side (pink and green quarters)
+            {
+                lineEndX = sliceEdgeX - 100; // Extend line leftward
+            }
+            else // Right side (blue and yellow quarters)
+            {
+                lineEndX = sliceEdgeX + 100; // Extend line rightward
+            }
+
+            // Draw the line from the edge of the slice
+            g.DrawLine(linePen, sliceEdgeX, sliceEdgeY, lineEndX, lineEndY);
+
+            // Draw a small circle at the end of the line
+            g.FillEllipse(Brushes.Black, lineEndX - 5, lineEndY - 5, 10, 10);
+
+            // Adjust text position based on the side
+            string labelText = circularMenuItems[i].Name;
+            SizeF textSize = g.MeasureString(labelText, font);
+            int textOffsetX = 0;
+
+            if (midAngle > Math.PI / 2 && midAngle < 3 * Math.PI / 2) // Left side
+            {
+                textOffsetX = -(int)textSize.Width - 15; // Place text to the left of the dot
+            }
+            else // Right side
+            {
+                textOffsetX = 15; // Place text to the right of the dot
+            }
+
+            // Enhance text visibility by adding a shadow
+            g.DrawString(labelText, font, Brushes.White,
+                         lineEndX + textOffsetX,
+                         lineEndY - textSize.Height / 2 + 2); // Shadow effect
+            g.DrawString(labelText, font, textBrush,
+                         lineEndX + textOffsetX,
+                         lineEndY - textSize.Height / 2); // Actual text
+        }
+
+        // Draw the central white circle
+        g.FillEllipse(Brushes.White, centerX - 50, centerY - 50, 100, 100); // Central circle
+
+        // Draw the central label
+        string centralText = "MENU";
+        Font centralFont = new Font("Arial", 20, FontStyle.Bold);
+        Brush centralBrush = new SolidBrush(ColorTranslator.FromHtml("#4a4a4a")); // Darker gray for central text
+        SizeF centralTextSize = g.MeasureString(centralText, centralFont);
+        g.DrawString(centralText, centralFont, Brushes.White,
+                     centerX - centralTextSize.Width / 2 + 2, centerY - centralTextSize.Height / 2 + 2); // Shadow
+        g.DrawString(centralText, centralFont, centralBrush,
+                     centerX - centralTextSize.Width / 2, centerY - centralTextSize.Height / 2); // Actual text
+    }
+
+
 
     public void updateTuioObject(TuioObject o)
     {
@@ -359,6 +503,10 @@ public class TuioDemo : Form, TuioListener
         bool isId17Present = false;
         drawmenu();
         Graphics g = pevent.Graphics;
+        if (customer == true)
+        {
+            DrawMenuItems(g, selectedRectangleIndex: 0, flag: true, borderColor: Color.Orange);
+        }
 
         DrawHomePage(g);
 
@@ -387,6 +535,7 @@ public class TuioDemo : Form, TuioListener
         {
             lock (objectList)
             {
+
                 foreach (TuioObject tobj in objectList.Values)
                 {
                     if (tobj.SymbolID == 3) isId3Present = true;
@@ -401,6 +550,76 @@ public class TuioDemo : Form, TuioListener
                 {
                     if (tobj.SymbolID == 6) isId3Present = true;
                     if (tobj.SymbolID == 17) isId17Present = true;
+                }
+                foreach (TuioObject tobj in objectList.Values)
+                {
+                    if (tobj.SymbolID == 3)
+                    {
+                        isId3Present = true;
+                        if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
+                        {
+                            OveralCart++;
+                            itemAdded = true;
+                            itemRemoved = false;
+                        }
+                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && OveralCart > 0)
+                        {
+                            OveralCart--;
+                            itemRemoved = true;
+                            itemAdded = false;
+                        }
+                        else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
+                        {
+                            itemAdded = false;
+                            itemRemoved = false;
+                        }
+                    }
+                    if (tobj.SymbolID == 6)
+                    {
+                        isId3Present = true;
+                        if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
+                        {
+                            OveralCart++;
+                            itemAdded = true;
+                            itemRemoved = false;
+                        }
+                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && OveralCart > 0)
+                        {
+                            OveralCart--;
+                            itemRemoved = true;
+                            itemAdded = false;
+                        }
+                        else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
+                        {
+                            itemAdded = false;
+                            itemRemoved = false;
+                        }
+                    }
+                    if (tobj.SymbolID == 5)
+                    {
+                        isId3Present = true;
+                        if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
+                        {
+                            OveralCart++;
+                            itemAdded = true;
+                            itemRemoved = false;
+                        }
+                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && OveralCart > 0)
+                        {
+                            OveralCart--;
+                            itemRemoved = true;
+                            itemAdded = false;
+                        }
+                        else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
+                        {
+                            itemAdded = false;
+                            itemRemoved = false;
+                        }
+                    }
+                    if (tobj.SymbolID == 17)
+                    {
+                        isId17Present = true;
+                    }
                 }
                 foreach (TuioObject tobj in objectList.Values)
                 {
@@ -448,6 +667,21 @@ public class TuioDemo : Form, TuioListener
                         flaglogin = false;
 
                         DrawDermatiqueinfo(g);
+                    }
+                    else if (tobj.SymbolID == 10)
+                    {
+                        flaglogin = false;
+                        int centerX = width / 2;
+                        int centerY = height / 2;
+                        int radius = 300;         // Radius of the circular menu
+                        Image backgroundImage = Image.FromFile("backmenu.png");  // Replace with the actual image path
+
+                        // Draw the background image to cover the full screen
+                        g.DrawImage(backgroundImage, 0, 0, width, height);
+
+                        // Call the DrawCircularMenu function
+                        DrawCircularMenu(g, centerX, centerY, radius);
+
                     }
                     else if (tobj.SymbolID == 5 && flagg)
                     {
@@ -509,7 +743,7 @@ public class TuioDemo : Form, TuioListener
             {
                 DrawMenuItems(g, selectedRectangleIndex: -1, flag: false, borderColor: Color.Transparent);
             }
-            else if (latestId == 1 && flagg)
+            else if (latestId == 1 && flagg || admin == true)
             {
                 ShowAdminMenu(g);
             }
@@ -583,9 +817,13 @@ public class TuioDemo : Form, TuioListener
         {
             DrawLoginScreen(g);
         }
-        if (latestIdIsOne)
+        if (latestIdIsOne || admin == true)
         {
             ShowAdminMenu(g);
+        }
+        if (customer == true)
+        {
+            DrawMenuItems(g, selectedRectangleIndex: -1, flag: false, borderColor: Color.Transparent);
         }
     }
     private void DrawSunblockInfo(Graphics g)
@@ -650,6 +888,8 @@ public class TuioDemo : Form, TuioListener
 
     }
 
+
+
     private void ShowUserScreen(Graphics g, string user = "", string name = "")
     {
         try
@@ -689,13 +929,22 @@ public class TuioDemo : Form, TuioListener
     {
         try
         {
-            // Draw the background image if it exists
+            // Path to the background image
+            string backgroundPath = "plain_bk.png"; // Update this path if needed
+
+            // Check if the background image exists
             if (File.Exists(backgroundPath))
             {
+                // Load and draw the background image
                 using (Image backgroundImg = Image.FromFile(backgroundPath))
                 {
+                    // Draw the background image to fill the entire window
                     g.DrawImage(backgroundImg, new Rectangle(0, 0, width, height));
                 }
+            }
+            else
+            {
+                Console.WriteLine("Background image not found.");
             }
 
             // Loop through each product rectangle to draw product details
@@ -766,6 +1015,7 @@ public class TuioDemo : Form, TuioListener
             Console.WriteLine("Error drawing product display: " + ex.Message);
         }
     }
+
     private void DrawRectangleBorder(Graphics g, Rectangle rect, Color rectColor, Color borderColor, int borderWidth, bool drawBorder)
     {
         // Fill the rectangle with the background color
@@ -1067,7 +1317,42 @@ public class TuioDemo : Form, TuioListener
             }
         }
     }
+    private void DrawVitaminInfo()
+    {
+        using (Graphics g = this.CreateGraphics())
+        {
+            // Load the background image
+            Image backgroundImage = Image.FromFile("plain_bk.png");
 
+            // Draw the background image (fill the entire form)
+            g.DrawImage(backgroundImage, 0, 0, this.Width, this.Height);
+
+            // Now draw the Vitamin information on top of the background
+            g.DrawString("Vitamin Information", new Font("Arial", 24), Brushes.Black, new PointF(100, 100));
+            g.DrawString("Vitamin A: Helps vision and immune system", new Font("Arial", 14), Brushes.Black, new PointF(100, 150));
+            g.DrawString("Vitamin C: Boosts immunity and skin health", new Font("Arial", 14), Brushes.Black, new PointF(100, 200));
+            // Add more information as needed
+        }
+    }
+
+    // Method to draw Deodorant information with background
+    private void DrawDeodorantInfo()
+    {
+        using (Graphics g = this.CreateGraphics())
+        {
+            // Load the background image
+            Image backgroundImage = Image.FromFile("plain_bk.png");
+
+            // Draw the background image (fill the entire form)
+            g.DrawImage(backgroundImage, 0, 0, this.Width, this.Height);
+
+            // Now draw the Deodorant information on top of the background
+            g.DrawString("Deodorant Information", new Font("Arial", 24), Brushes.Black, new PointF(100, 100));
+            g.DrawString("Deodorant: Keeps you fresh and odor-free", new Font("Arial", 14), Brushes.Black, new PointF(100, 150));
+            g.DrawString("Antiperspirants: Prevents sweat buildup", new Font("Arial", 14), Brushes.Black, new PointF(100, 200));
+            // Add more information as needed
+        }
+    }
     private void DrawLoginScreen(Graphics g)
     {
         try
@@ -1195,44 +1480,105 @@ public class TuioDemo : Form, TuioListener
             g.DrawString("To close this screen, show the product again", textFont, textBrush, textStartX, textStartY);
         }
     }
-
-
-    private async Task StartListeningForLogin(CancellationToken token)
+    private async Task HandleServerAsync(string server, int port, string serverName)
     {
         try
         {
-            TcpListener listener = new TcpListener(System.Net.IPAddress.Parse("127.0.0.1"), 5000);
-            listener.Start();
-
-            while (!token.IsCancellationRequested && !messageDisplayed) // Stop listening if a message has been displayed
+            using (TcpClient client = new TcpClient())
             {
-                if (listener.Pending())
+                MessageBox.Show($"{serverName}: Attempting to connect to {server}:{port}...");
+
+                // Wait for 3 seconds before trying to connect to ensure the server is ready
+                await Task.Delay(3000); // Wait a little longer before trying to connect
+
+                await client.ConnectAsync(server, port);  // Connect to the Python server
+
+                MessageBox.Show($"{serverName}: Connected!");
+
+                using (NetworkStream stream = client.GetStream())
                 {
-                    using (TcpClient client = await listener.AcceptTcpClientAsync())
-                    using (NetworkStream stream = client.GetStream())
+                    byte[] buffer = new byte[1024];
+                    while (true)
                     {
-                        byte[] buffer = new byte[1024];
-                        int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, token);
-                        if (bytesRead > 0)
+                        if (stream.DataAvailable)
                         {
-                            string message = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-                            ProcessLoginMessage(message); // Pass the message to your display logic
+                            int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                            if (bytesRead > 0)
+                            {
+                                string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+
+                                string[] names = { "tarek", "farah", "youssef", "malak", "roqaia", "rawan", "unknown" };
+
+                                if (message.ToLower().Contains("vitamin"))
+                                {
+                                    // Show message box for vitamin
+                                    MessageBox.Show("Received message: Vitamin detected! Displaying Vitamin Info...");
+
+                                    // Call a method to draw the information about Vitamin
+                                    Invoke(new Action(() => DrawVitaminInfo()));
+                                }
+                                else if (message.ToLower().Contains("deodorant"))
+                                {
+                                    // Show message box for deodorant
+                                    MessageBox.Show("Received message: Deodorant detected! Displaying Deodorant Info...");
+
+                                    // Call a method to draw the information about Deodorant
+                                    Invoke(new Action(() => DrawDeodorantInfo()));
+                                }
+                                if (facelogin == false)
+                                {
+
+                                    foreach (var name in names)
+                                    {
+                                        if (message.ToLower().Contains(name))
+                                        {
+                                            facelogin = true;
+                                            // Show the complete message in a MessageBox
+                                            MessageBox.Show($"Complete Message: {message}");
+                                            break; // Exit the loop once a match is found
+                                        }
+                                    }
+                                }
+
+                                // Check if the message contains "customer"
+                                if (message.ToLower().Contains("customer") && customer == false)
+                                {
+                                    // Show message box for customer
+                                    MessageBox.Show("Received message: Customer detected! Displaying Menu...");
+
+                                    // Set the flag for customer
+                                    customer = true;
+
+                                    // Call method to draw the menu items
+                                    // We can call it with some default values for now, adjust parameters as needed
+                                    Invoke(new Action(() => DrawMenuItems(Graphics.FromHwnd(this.Handle), 0, true, Color.Blue)));
+                                }
+                                else
+                                {
+                                    if (message.ToLower().Contains("admin"))
+                                    {
+                                        // Handle any other message
+                                        if (admin == false)
+                                        {
+                                            admin = true;
+                                            MessageBox.Show($"Received message:admin detected! Displaying Menu.. ");
+                                            Invoke(new Action(() => ShowAdminMenu(Graphics.FromHwnd(this.Handle))));
+                                        }
+                                    }
+                                }
+                            }
                         }
+                        await Task.Delay(100);  // Delay to reduce CPU usage
                     }
                 }
-
-                await Task.Delay(10);  // Prevent tight loop
             }
-            listener.Stop();
         }
         catch (Exception ex)
         {
-            if (!token.IsCancellationRequested)
-            {
-                Console.WriteLine("Error in TCP connection: " + ex.Message);
-            }
+            MessageBox.Show($"{serverName}: Error - {ex.Message}");
         }
     }
+
 
     private void ProcessLoginMessage(string message)
     {
@@ -1247,11 +1593,11 @@ public class TuioDemo : Form, TuioListener
 
             Task.Run(async () =>
             {
-                await Task.Delay(5000); // Simulate processing time
+                await Task.Delay(5000);
 
                 this.Invoke(new Action(() =>
                 {
-                    ShowMessageOnScreen(message, Color.Blue); // Display the login message
+                    ShowMessageOnScreen(message, Color.Blue);
                     MessageBox.Show(message, "Login", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }));
             });
@@ -1267,7 +1613,7 @@ public class TuioDemo : Form, TuioListener
             Font = new Font("Arial", 18, FontStyle.Bold),
             AutoSize = true,
             BackColor = Color.Transparent,
-            Location = new Point((width - 300) / 2, (height - 50) / 2)
+            Location = new Point((this.Width - 300) / 2, (this.Height - 50) / 2)
         };
 
         this.Controls.Clear(); // Clear previous controls
@@ -1307,45 +1653,8 @@ public class TuioDemo : Form, TuioListener
         Task.Run(() => HandleServerAsync(server, port, "object Detection"));
     }
 
-    private async Task HandleServerAsync(string server, int port, string serverName)
-    {
-        try
-        {
-            using (TcpClient client = new TcpClient())
-            {
-                MessageBox.Show($"{serverName}: Attempting to connect to {server}:{port}...");
 
-                // Wait for 3 seconds before trying to connect to ensure the server is ready
-                await Task.Delay(3000); // Wait a little longer before trying to connect
 
-                await client.ConnectAsync(server, port);  // Connect to the Python server
-
-                MessageBox.Show($"{serverName}: Connected!");
-
-                using (NetworkStream stream = client.GetStream())
-                {
-                    byte[] buffer = new byte[1024];
-                    while (true)
-                    {
-                        if (stream.DataAvailable)
-                        {
-                            int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                            if (bytesRead > 0)
-                            {
-                                string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                                MessageBox.Show("{message}");
-                            }
-                        }
-                        await Task.Delay(100);  // Delay to reduce CPU usage
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"{serverName}: Error - {ex.Message}");
-        }
-    }
 
 
 }
