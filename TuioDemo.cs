@@ -10,7 +10,6 @@ using System.Drawing.Drawing2D;
 using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Text;
-using OfficeOpenXml;
 using System.Collections.Concurrent;
 using System.Linq;
 public class TuioDemo : Form, TuioListener
@@ -66,11 +65,6 @@ public class TuioDemo : Form, TuioListener
     int add55 = 0;
     bool itemAdded55 = false;
     bool itemRemoved55 = false;
-    bool savedInExcel = false;
-    private string currentUserName = null;
-    private string excelFilePath = "D:\\hciii course\\hciii\\Smart_Shopping-main\\UserProfileByFace.xlsx";
-    private Dictionary<string, int> userCart = new Dictionary<string, int>();
-
     bool flagloginbluetooth = false;
     List<string> knownNames = new List<string>
     {
@@ -219,14 +213,6 @@ public class TuioDemo : Form, TuioListener
     }
     private void DrawCircularMenu(Graphics g, int centerX, int centerY, int radius, int highlightedIndex = -1)
     {
-        string backgroundImagePath = "backmenu.png"; // Update with your actual image path
-        if (File.Exists(backgroundImagePath))
-        {
-            using (Image bgImage = Image.FromFile(backgroundImagePath))
-            {
-                g.DrawImage(bgImage, new Rectangle(0, 0, width, height));
-            }
-        }
         int itemCount = circularMenuItems.Count; // Number of items in the menu
         float angleStep = 360f / itemCount;      // Angle per menu item
         float gapAngle = 2f;                     // Gap between menu items
@@ -246,7 +232,6 @@ public class TuioDemo : Form, TuioListener
 
         for (int i = 0; i < itemCount; i++)
         {
-          
             // Calculate start and mid angles for the current slice
             float startAngle = (i * angleStep) % 360;
             float midAngle = (startAngle + angleStep / 2) % 360;
@@ -643,7 +628,7 @@ public class TuioDemo : Form, TuioListener
             }
         }
     }
-   
+
     protected override void OnPaintBackground(PaintEventArgs pevent)
     {
         bool isId12Present = false;
@@ -975,26 +960,21 @@ public class TuioDemo : Form, TuioListener
                             case "About Us":
                                 //aboutus = true;
                                 DrawAboutUsPage(g);
-                                isId17Present = false;
                                 latestId = 11; // Update latestId when SymbolID 17 is detected
                                 break;
                             case "Our Products":
 
                                 latestId = 2;
                                 DrawMenuItems(g, selectedRectangleIndex: -1, flag: false, borderColor: Color.Transparent);
-                                isId17Present = false;
 
                                 break;
                             case "Home Page":
                                 DrawHomePage(g);
                                 latestId = 0;
-                                isId17Present = false;
 
                                 break;
                             case "Cart":
                                 DrawCrudPage(g);
-                                latestId = 13;
-                                isId17Present = false;
                                 break;
                             case "Instructions":
                                 //OpenInstructionsPage();
@@ -1165,107 +1145,7 @@ public class TuioDemo : Form, TuioListener
             DrawMenuItems(g, selectedRectangleIndex: -1, flag: false, borderColor: Color.Transparent);
         }
     }
-    private void SaveUserCartToExcel(string userName, bool showMessage = true)
-    {
-        try
-        {
-            savedInExcel = true;
-            // Map quantities to product names
-            var productQuantities = new Dictionary<string, int>
-        {
-            { "Sunblock", OveralCart3 },
-            { "Dermatique", OveralCart5 },
-            { "Vitamin D-3", add55 },
-            { "Deodorant", add45 }
-        };
-
-            using (var package = new ExcelPackage(new FileInfo(excelFilePath)))
-            {
-                // Get the worksheet by name
-                var worksheet = package.Workbook.Worksheets["Sheet1"];
-
-                // Check if the worksheet exists and is not empty
-                if (worksheet == null || worksheet.Dimension == null)
-                {
-                    if (showMessage) MessageBox.Show("The worksheet is empty.");
-                    return;
-                }
-
-                int totalRows = worksheet.Dimension.Rows;
-                bool userExists = false;
-
-                // Check if the user already exists in the sheet
-                for (int row = 2; row <= totalRows; row++) // Assuming row 1 contains headers
-                {
-                    string nameInRow = worksheet.Cells[row, 1].Text;
-                    MessageBox.Show("in for loop");
-                    if (nameInRow.Equals(userName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        userExists = true;
-                        MessageBox.Show("in condition");
-                        // Clear existing products for the user
-                        //for (int clearRow = row; clearRow <= totalRows; clearRow++)
-                        //{
-                        //    if (worksheet.Cells[clearRow, 1].Text.Equals(userName, StringComparison.OrdinalIgnoreCase))
-                        //    {
-                        //        worksheet.Cells[clearRow, 2].Value = null; // Clear product
-                        //        worksheet.Cells[clearRow, 3].Value = null; // Clear quantity
-                        //    }
-                        //    else
-                        //    {
-                        //        break;
-                        //    }
-                        //}
-
-                        // Add updated product data for the user
-                        foreach (var product in productQuantities)
-                        {
-                            MessageBox.Show("foreach var product");
-                            if (OveralCart3 > 0) // Only add products with non-zero quantities
-                            {
-                                
-                                worksheet.Cells[row, 1].Value = userName;  // Column 1: Name
-                                worksheet.Cells[row, 2].Value = OveralCart3;  // Column 2: Product
-                                worksheet.Cells[row, 3].Value = "sunblock"; // Column 3: Quantity
-                                MessageBox.Show(worksheet.Cells[row, 3].Value?.ToString() ?? "Value is null");
-                                row++;
-                                package.Save();
-                                if (showMessage) MessageBox.Show("User cart successfully updated in Excel.");
-                                return; // Exit function after saving data
-                                
-
-                            }
-                        }
-
-                        // Save and break after updating the user
-                       
-                    }
-                }
-
-                // If the user does not exist, append a new row
-                int nextAvailableRow = totalRows + 1;
-                foreach (var product in productQuantities)
-                {
-                    if (product.Value > 0) // Only add products with non-zero quantities
-                    {
-                        worksheet.Cells[nextAvailableRow, 1].Value = userName;  // Column 1: Name
-                        worksheet.Cells[nextAvailableRow, 2].Value = product.Key;  // Column 2: Product
-                        worksheet.Cells[nextAvailableRow, 3].Value = product.Value; // Column 3: Quantity
-                        nextAvailableRow++;
-                    }
-                }
-
-                // Save and break after adding the user
-                package.Save();
-                if (showMessage) MessageBox.Show("User cart successfully saved to Excel.");
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Error saving user cart to Excel: {ex.Message}");
-        }
-    }
-
+    
     private void DrawSunblockInfo(Graphics g)
     {
         try
@@ -1381,89 +1261,101 @@ public class TuioDemo : Form, TuioListener
     {
         try
         {
-            // Get canvas dimensions
-            int canvasWidth = (int)g.VisibleClipBounds.Width;
-            int canvasHeight = (int)g.VisibleClipBounds.Height;
-
-            // Number of items per row and total rows needed
-            int itemsPerRow = 3; // 3 items per row
-            int totalRows = (int)Math.Ceiling(productRectangles.Count / (float)itemsPerRow);
-
-            // Adjust padding and calculate smaller dimensions for the rectangles
-            int padding = 80; // Space between items
-            int rectWidth = (canvasWidth - (padding * (itemsPerRow + 1))) / itemsPerRow - 80; // Reduced width
-            int rectHeight = (int)(rectWidth * 1.0); // Aspect ratio of 1.0 (square-like)
-
-            // Total grid height calculation
-            int totalGridHeight = totalRows * (rectHeight + padding) - padding;
-
-            // Center the grid vertically and horizontally
-            int totalGridWidth = itemsPerRow * (rectWidth + padding) - padding;
-            int offsetX = (canvasWidth - totalGridWidth) / 2;
-            int offsetY = (canvasHeight - totalGridHeight) / 2;
-
             // Path to the background image
-            string backgroundPath = "plain_bk.png";
+            string backgroundPath = "plain_bk.png"; // Update this path if needed
 
-            // Draw the background
+            // Check if the background image exists
             if (File.Exists(backgroundPath))
             {
+                // Load and draw the background image
                 using (Image backgroundImg = Image.FromFile(backgroundPath))
                 {
-                    g.DrawImage(backgroundImg, new Rectangle(0, 0, canvasWidth, canvasHeight));
+                    // Draw the background image to fill the entire window
+                    g.DrawImage(backgroundImg, new Rectangle(0, 0, width, height));
                 }
             }
-
-            // Loop through each product rectangle
-            for (int i = 0; i < productRectangles.Count; i++)
+            else
             {
-                // Calculate row and column for the current item
-                int row = i / itemsPerRow;
-                int col = i % itemsPerRow;
+                Console.WriteLine("Background image not found.");
+            }
 
-                // Calculate position with padding and offsets for centering
-                int x = offsetX + col * (rectWidth + padding);
-                int y = offsetY + row * (rectHeight + padding);
-
-                // Define product rectangle
-                Rectangle productRect = new Rectangle(x, y, rectWidth, rectHeight);
+            // Loop through each product rectangle to draw product details
+            for (int i = 0; i < 4; i++)
+            {
+                // Draw the main product display rectangle without rounded corners
+                Rectangle productRect = productRectangles[i].Item1;
                 Color productRectColor = Color.FromArgb(255, 234, 233, 239);
-
-                // Draw rectangle border
+                productRect.Y -= 300;
+            
+                // Draw rectangle with border if selected, else no border
                 bool drawBorder = (flag && i == selectedRectangleIndex);
                 Color effectiveBorderColor = drawBorder ? borderColor : productRectColor;
-                int borderWidth = drawBorder ? 3 : 0;
+                int borderWidth = drawBorder ? 3 : 0; // Adjust width if selected
 
                 DrawRectangleBorder(g, productRect, productRectColor, effectiveBorderColor, borderWidth, drawBorder);
 
-                // Draw the product image
+                // Draw the product image inside the rectangle without changing its location
                 if (File.Exists(imagePaths[i]))
                 {
                     using (Bitmap productImg = new Bitmap(imagePaths[i]))
                     {
+                        // Make the top-left pixel's color transparent
                         Color transparentColor = productImg.GetPixel(0, 0);
                         productImg.MakeTransparent(transparentColor);
 
-                        // Scale image proportionally to fit inside the rectangle
-                        int imgWidth = (int)(rectWidth * 0.6f); // Reduced size for better fit
-                        int imgHeight = (int)(rectHeight * 0.6f);
+                        int imgX, imgY, imgWidth, imgHeight;
 
-                        // Center the image within the rectangle
-                        int imgX = x + (rectWidth - imgWidth) / 2;
-                        int imgY = y + (rectHeight - imgHeight - (int)(rectHeight * 0.2f)) / 2;
+                        if (i == 0)
+                        {
+                            imgX = (productRect.X + (productRect.Width - 200) / 2) - 30;
+                            imgY = productRect.Y - 15;
+                            imgWidth = 280;
+                            imgHeight = 400;
+                        }
+                        else
+                        {
+                            imgX = productRect.X + (productRect.Width - 200) / 2;
+                            imgY = productRect.Y + 20;
+                            imgWidth = 200;
+                            imgHeight = 350;
+                        }
 
+                        // Draw the image with transparency
                         g.DrawImage(productImg, new Rectangle(imgX, imgY, imgWidth, imgHeight));
                     }
                 }
 
-                // Define and draw the pink text section BELOW the product rectangle
-                int textSectionHeight = (int)(rectHeight * 0.15f); // Reduced height of text section
-                Rectangle bottomTextRect = new Rectangle(
-                    x,
-                    y + rectHeight - 10, // Position it just below the product rectangle
-                    rectWidth,
-                    textSectionHeight
-                );
+                // Set text based on index
+                string bottomText;
+                switch (i)
+                {
+                    case 0:
+                        bottomText = "Dermatique";
+                        break;
+                    case 1:
+                        bottomText = "Sunblock";
+                        break;
+                    case 2:
+                        bottomText = "Deodorant";
+                        break;
+                    case 3:
+                        bottomText = "Nivea Cream";
+                        break;
+                    case 4:
+                        bottomText = "Vitamin D-3";
+                        break;
+                    case 5:
+                        bottomText = "One Two Three Medicine";
+                        break;
+                   default:
+                        bottomText = "Unknown";
+                        break;
+                }
+
+                // Draw the pink section at the bottom
+                Rectangle bottomTextRect = productRectangles[i].Item2;
+       
+                bottomTextRect.Y -= 300; 
 
                 using (SolidBrush pinkBrush = new SolidBrush(Color.FromArgb(255, 254, 81, 161)))
                 {
@@ -1471,25 +1363,107 @@ public class TuioDemo : Form, TuioListener
                 }
 
                 // Draw text inside the pink section
-                string bottomText;
-                switch (i)
-                {
-                    case 0: bottomText = "Dermatique"; break;
-                    case 1: bottomText = "Sunblock"; break;
-                    case 2: bottomText = "Deodorant"; break;
-                    case 3: bottomText = "Nivea Cream"; break;
-                    case 4: bottomText = "Vitamin D-3"; break;
-                    case 5: bottomText = "One Two Three Medicine"; break;
-                    default: bottomText = "Unknown"; break;
-                }
-
-                using (Font textFont = new Font("Times New Roman", 12, FontStyle.Bold)) // Adjust font size if needed
+                using (Font textFont = new Font("Times New Roman", 14, FontStyle.Bold))
                 using (Brush textBrush = new SolidBrush(Color.White))
                 {
                     SizeF textSize = g.MeasureString(bottomText, textFont);
                     PointF textLocation = new PointF(
-                        bottomTextRect.X + (bottomTextRect.Width - textSize.Width) / 2.0f,
-                        bottomTextRect.Y + (bottomTextRect.Height - textSize.Height) / 2.0f
+                        bottomTextRect.X + (bottomTextRect.Width - textSize.Width) / 2 - 15,
+                        bottomTextRect.Y + (bottomTextRect.Height - textSize.Height) / 23
+                    );
+                    g.DrawString(bottomText, textFont, textBrush, textLocation);
+                }
+            }
+            for (int i = 4; i < productRectangles.Count; i++)
+            {
+                // Draw the main product display rectangle without rounded corners
+                Rectangle productRect = productRectangles[i].Item1;
+                Color productRectColor = Color.FromArgb(255, 234, 233, 239);
+                productRect.Y += 200;
+                productRect.X -= 1200;
+                // Draw rectangle with border if selected, else no border
+                bool drawBorder = (flag && i == selectedRectangleIndex);
+                Color effectiveBorderColor = drawBorder ? borderColor : productRectColor;
+                int borderWidth = drawBorder ? 3 : 0; // Adjust width if selected
+
+                DrawRectangleBorder(g, productRect, productRectColor, effectiveBorderColor, borderWidth, drawBorder);
+
+                // Draw the product image inside the rectangle without changing its location
+                if (File.Exists(imagePaths[i]))
+                {
+                    using (Bitmap productImg = new Bitmap(imagePaths[i]))
+                    {
+                        // Make the top-left pixel's color transparent
+                        Color transparentColor = productImg.GetPixel(0, 0);
+                        productImg.MakeTransparent(transparentColor);
+
+                        int imgX, imgY, imgWidth, imgHeight;
+
+                        if (i == 0)
+                        {
+                            imgX = (productRect.X + (productRect.Width - 200) / 2) - 30;
+                            imgY = productRect.Y - 15;
+                            imgWidth = 280;
+                            imgHeight = 400;
+                        }
+                        else
+                        {
+                            imgX = productRect.X + (productRect.Width - 200) / 2;
+                            imgY = productRect.Y + 20;
+                            imgWidth = 200;
+                            imgHeight = 350;
+                        }
+
+                        // Draw the image with transparency
+                        g.DrawImage(productImg, new Rectangle(imgX, imgY, imgWidth, imgHeight));
+                    }
+                }
+
+                // Set text based on index
+                string bottomText;
+                switch (i)
+                {
+                    case 0:
+                        bottomText = "Dermatique";
+                        break;
+                    case 1:
+                        bottomText = "Sunblock";
+                        break;
+                    case 2:
+                        bottomText = "Deodorant";
+                        break;
+                    case 3:
+                        bottomText = "Nivea Cream";
+                        break;
+                    case 4:
+                        bottomText = "Vitamin D-3";
+                        break;
+                    case 5:
+                        bottomText = "One Two Three Medicine";
+                        break;
+                    default:
+                        bottomText = "Unknown";
+                        break;
+                }
+
+                // Draw the pink section at the bottom
+                Rectangle bottomTextRect = productRectangles[i].Item2;
+
+                bottomTextRect.Y += 200; 
+                bottomTextRect.X -= 1200;
+                using (SolidBrush pinkBrush = new SolidBrush(Color.FromArgb(255, 254, 81, 161)))
+                {
+                    g.FillRectangle(pinkBrush, bottomTextRect);
+                }
+
+                // Draw text inside the pink section
+                using (Font textFont = new Font("Times New Roman", 14, FontStyle.Bold))
+                using (Brush textBrush = new SolidBrush(Color.White))
+                {
+                    SizeF textSize = g.MeasureString(bottomText, textFont);
+                    PointF textLocation = new PointF(
+                        bottomTextRect.X + (bottomTextRect.Width - textSize.Width) / 2 - 15,
+                        bottomTextRect.Y + (bottomTextRect.Height - textSize.Height) / 23
                     );
                     g.DrawString(bottomText, textFont, textBrush, textLocation);
                 }
@@ -1500,7 +1474,6 @@ public class TuioDemo : Form, TuioListener
             Console.WriteLine("Error drawing product display: " + ex.Message);
         }
     }
-
 
     private void DrawRectangleBorder(Graphics g, Rectangle rect, Color rectColor, Color borderColor, int borderWidth, bool drawBorder)
     {
@@ -1602,7 +1575,7 @@ public class TuioDemo : Form, TuioListener
             {
                 g.DrawString(cartText, cartFont, cartBrush, new PointF(20, 20)); // Adjust the position as needed
             }
-            string cartTextt = $"allcartitems: {OveralCart5}";
+            string cartTextt = $"allcartitems: {OveralCart}";
             using (Font cartFont = new Font("Times New Roman", 16, FontStyle.Bold))
             using (SolidBrush cartBrush = new SolidBrush(Color.Black))
             {
@@ -1987,12 +1960,6 @@ public class TuioDemo : Form, TuioListener
         {
             MessageBox.Show($"Error drawing CRUD page: {ex.Message}");
         }
-
-        // Save user cart to Excel without showing a message
-        if (savedInExcel == false)
-        {
-            SaveUserCartToExcel(currentUserName, false);
-        }
     }
 
     private void DrawProductCard(Graphics g, int startX, int startY, string productName, int productCount, string productImagePath)
@@ -2220,59 +2187,6 @@ public class TuioDemo : Form, TuioListener
             }
         }
     }
-    private void LoadUserProfile(string userName)
-    {
-        try
-        {
-            using (var package = new ExcelPackage(new FileInfo(excelFilePath)))
-            {
-                // Get the worksheet by name (update "Sheet1" to match your sheet name)
-                var worksheet = package.Workbook.Worksheets["Sheet1"];
-
-                // Check if the worksheet is empty
-                if (worksheet.Dimension == null)
-                {
-                    MessageBox.Show("The worksheet is empty.");
-                    return;
-                }
-
-                // Get the total rows and columns
-                int totalRows = worksheet.Dimension.Rows;
-
-                bool userFound = false;
-
-                // Iterate through each row
-                for (int row = 2; row <= totalRows; row++) // Assuming row 1 contains headers
-                {
-                    string nameInRow = worksheet.Cells[row, 1].Text; // Column 1 contains names
-
-                    if (nameInRow.Equals(userName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        userFound = true;
-
-                        // Fetch relevant user data
-                        string product = worksheet.Cells[row, 2].Text;  // Column 2: Product
-                        string quantity = worksheet.Cells[row, 3].Text; // Column 3: Quantity
-                        string emotion = worksheet.Cells[row, 4].Text;  // Column 4: Emotion
-
-                        // Display or process the data
-                        MessageBox.Show($"Name: {nameInRow}\nProduct: {product}\nQuantity: {quantity}\nEmotion: {emotion}");
-                    }
-                }
-
-                if (!userFound)
-                {
-                    MessageBox.Show($"No data found for user: {userName}");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Error reading the Excel file: {ex.Message}");
-        }
-    }
-
-
 
     private void Tutorial(Graphics g)
     {
@@ -2318,14 +2232,6 @@ public class TuioDemo : Form, TuioListener
             g.DrawString("To close this screen, show the product again", textFont, textBrush, textStartX, textStartY);
         }
     }
-    private void Logout()
-    {
-        
-        currentUserName = null;
-        userCart.Clear();
-    }
-
-
     private async Task HandleServerAsync(string server, int port, string serverName)
     {
         try
@@ -2373,6 +2279,104 @@ public class TuioDemo : Form, TuioListener
                                     Invoke(new Action(() => DrawDeodorantInfo()));
                                     latestId = 45;
                                     
+                                }else if(message.ToLower().Contains("right"))
+                                {
+                                    MessageBox.Show("Received message: Gesture detected! right...");
+                                    Invoke(new Action(() => DrawVitaminInfo()));
+
+                                    if (latestId==3)
+                                    {
+                                        OveralCart3++;
+                                        if (OveralCart3 == 1)
+                                        {
+                                            OveralCart++;
+
+                                        }
+                                    }
+                                    if (latestId == 5)
+                                    {
+                                        OveralCart5++;
+                                        if (OveralCart5 == 1)
+                                        {
+                                            OveralCart++;
+
+                                        }
+                                    }
+                                    if(latestId==45)
+                                    {
+                                        add45++;
+                                        if (add45 == 1)
+                                        {
+                                            OveralCart++;
+
+                                        }
+                                    }
+                                    add55++;
+                                    if (add55 == 1)
+                                    {
+                                        OveralCart++;
+
+                                    }
+
+
+                                }
+                                else if (message.ToLower().Contains("left"))
+                                {
+                                    Invoke(new Action(() => DrawVitaminInfo()));
+                                   
+
+                                    MessageBox.Show("Received message: Gesture detected! left...");
+                                    if(latestId==3)
+                                    {
+                                        if (OveralCart3 != 0)
+                                        {
+                                            OveralCart3--;
+                                            if (OveralCart3 == 0)
+                                            {
+                                                OveralCart--;
+
+                                            }
+
+                                        }
+                                    }
+                                    if(latestId==5)
+                                    {
+                                        if (OveralCart5 != 0)
+                                        {
+                                            OveralCart5--;
+                                            if (OveralCart5 == 0)
+                                            {
+                                                OveralCart--;
+
+                                            }
+
+                                        }
+                                    }
+                                    if(latestId==45)
+                                    {
+                                        if (add45 != 0)
+                                        {
+                                            add45--;
+                                            if (add45 == 0)
+                                            {
+                                                OveralCart--;
+
+                                            }
+
+                                        }
+
+                                    }
+                                    if (add55 != 0)
+                                    {
+                                        add55--;
+                                        if (add55 == 0)
+                                        {
+                                            OveralCart--;
+
+                                        }
+
+                                    }
+
                                 }
                                 if (latestId == 4)
                                 {
@@ -2384,18 +2388,10 @@ public class TuioDemo : Form, TuioListener
                                         {
                                             if (message.ToLower().Contains(name))
                                             {
-                                                currentUserName = name;
-                                                
-                                                LoadUserProfile(currentUserName);
-                           
                                                 facelogin = true;
                                                 // Show the complete message in a MessageBox
                                                 MessageBox.Show($"Complete Message: {message}");
                                                 MessageBox.Show($"Welcome: {name}");
-                                                latestId = 12;
-                                               // Invoke(new Action(() => DrawCrudPage(Graphics.FromHwnd(this.Handle))));
-                                                Invoke(new Action(() => DrawCircularMenu(Graphics.FromHwnd(this.Handle),width/2,height/2,300,-1)));
-
                                                 break; // Exit the loop once a match is found
                                             }
                                         }
