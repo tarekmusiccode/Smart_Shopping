@@ -10,6 +10,7 @@ using System.Drawing.Drawing2D;
 using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Text;
+using OfficeOpenXml;
 using System.Collections.Concurrent;
 using System.Linq;
 public class TuioDemo : Form, TuioListener
@@ -35,7 +36,7 @@ public class TuioDemo : Form, TuioListener
     private Image lastObjectImage;
     private int latestId = -1;
     private bool messageDisplayed = false;
-    Font font = new Font("Arial", 10.0f);
+    Font font = new Font("Times New Roman", 20);
     SolidBrush fntBrush = new SolidBrush(Color.White);
     SolidBrush bgrBrush = new SolidBrush(Color.FromArgb(0, 0, 64));
     SolidBrush curBrush = new SolidBrush(Color.FromArgb(192, 0, 192));
@@ -44,7 +45,7 @@ public class TuioDemo : Form, TuioListener
     Pen curPen = new Pen(new SolidBrush(Color.Blue), 1);
     List<Tuple<Rectangle, Rectangle>> productRectangles = new List<Tuple<Rectangle, Rectangle>>();
     private Point lastObjectPosition = Point.Empty;
-    List<string> imagePaths = new List<string> { "Sunblock.png", "dermatique1.png", "dermatique1.png" };
+    List<string> imagePaths = new List<string> { "dermatique1.png", "Sunblock.png", "Deodrant.jpeg", "NIVEA.jpeg", "Vitamin.jpeg", "123.jpg" };
     string backgroundPath = "Untitled design (3).png";
     bool isAdmin = false;
     bool flagg = true;
@@ -56,8 +57,19 @@ public class TuioDemo : Form, TuioListener
     bool admin = false;
     bool facelogin = false;
     int OveralCart = 0;
+    int OveralCart3 = 0;
+    int OveralCart5 = 0;
+    int OveralCart6 = 0;
+    bool isId17Present = false;
     private float rotationAngle = 0f; // Class-level variable for rotation
-
+    int add45 = 0;
+    int add55 = 0;
+    bool itemAdded55 = false;
+    bool itemRemoved55 = false;
+    bool savedInExcel = false;
+    private string currentUserName = null;
+    private string excelFilePath = "D:\\hciii course\\hciii\\Smart_Shopping-main\\UserProfileByFace.xlsx";
+    private Dictionary<string, int> userCart = new Dictionary<string, int>();
 
     bool flagloginbluetooth = false;
     List<string> knownNames = new List<string>
@@ -207,10 +219,18 @@ public class TuioDemo : Form, TuioListener
     }
     private void DrawCircularMenu(Graphics g, int centerX, int centerY, int radius, int highlightedIndex = -1)
     {
+        string backgroundImagePath = "backmenu.png"; // Update with your actual image path
+        if (File.Exists(backgroundImagePath))
+        {
+            using (Image bgImage = Image.FromFile(backgroundImagePath))
+            {
+                g.DrawImage(bgImage, new Rectangle(0, 0, width, height));
+            }
+        }
         int itemCount = circularMenuItems.Count; // Number of items in the menu
         float angleStep = 360f / itemCount;      // Angle per menu item
         float gapAngle = 2f;                     // Gap between menu items
-        Font font = new Font("Arial", 18, FontStyle.Bold); // Font for labels
+        Font font = new Font("Times New Roman", 18, FontStyle.Bold); // Font for labels
         Brush textBrush = new SolidBrush(ColorTranslator.FromHtml("#4a4a4a")); // Text color
         Pen linePen = new Pen(ColorTranslator.FromHtml("#4a4a4a"), 2);         // Pen for connector lines
         Pen highlightPen = new Pen(ColorTranslator.FromHtml("#FFA500"), 8);    // Highlight border (thicker width)
@@ -226,6 +246,7 @@ public class TuioDemo : Form, TuioListener
 
         for (int i = 0; i < itemCount; i++)
         {
+          
             // Calculate start and mid angles for the current slice
             float startAngle = (i * angleStep) % 360;
             float midAngle = (startAngle + angleStep / 2) % 360;
@@ -319,7 +340,7 @@ public class TuioDemo : Form, TuioListener
 
         // Draw the central label
         string centralText = "MENU";
-        Font centralFont = new Font("Arial", 20, FontStyle.Bold);
+        Font centralFont = new Font("Times New Roman", 20, FontStyle.Bold);
         Brush centralBrush = new SolidBrush(ColorTranslator.FromHtml("#4a4a4a")); // Darker gray for central text
         SizeF centralTextSize = g.MeasureString(centralText, centralFont);
         g.DrawString(centralText, centralFont, Brushes.White,
@@ -327,6 +348,8 @@ public class TuioDemo : Form, TuioListener
         g.DrawString(centralText, centralFont, centralBrush,
                      centerX - centralTextSize.Width / 2, centerY - centralTextSize.Height / 2); // Actual text
     }
+
+
 
     private void DrawAboutUsPage(Graphics g)
     {
@@ -360,7 +383,7 @@ public class TuioDemo : Form, TuioListener
                 "With a combination of gesture recognition, object detection, and face recognition, " +
                 "we aim to make shopping seamless, informative, and enjoyable.\n\n" +
                 "Thank you for choosing us!";
-            using (Font descFont = new Font("Arial", 14))
+            using (Font descFont = new Font("Times New Roman", 14))
             using (Brush descBrush = new SolidBrush(Color.Black))
             {
                 g.DrawString(description, descFont, descBrush, new RectangleF(overlayRect.X + 20, overlayRect.Y + 50, overlayRect.Width - 40, overlayRect.Height - 60));
@@ -368,7 +391,7 @@ public class TuioDemo : Form, TuioListener
 
             // Team Section Header - Meet Our Team
             string teamHeader = "Meet Our Team:";
-            using (Font teamFont = new Font("Arial", 20, FontStyle.Bold))
+            using (Font teamFont = new Font("Times New Roman", 20, FontStyle.Bold))
             using (Brush teamBrush = new SolidBrush(Color.Black)) // Dark Gray color for the team header
             {
                 g.DrawString(teamHeader, teamFont, teamBrush, new PointF(50, 280));
@@ -417,14 +440,14 @@ public class TuioDemo : Form, TuioListener
                 }
 
                 // Add name
-                using (Font nameFont = new Font("Arial", 14, FontStyle.Bold))
+                using (Font nameFont = new Font("Times New Roman", 14, FontStyle.Bold))
                 using (Brush nameBrush = new SolidBrush(Color.Black))
                 {
                     g.DrawString(teamMembers[i], nameFont, nameBrush, new PointF(x + 60, y + 20));
                 }
 
                 // Add description
-                using (Font descFont = new Font("Arial", 12, FontStyle.Regular))
+                using (Font descFont = new Font("Times New Roman", 12, FontStyle.Regular))
                 using (Brush descBrush = new SolidBrush(Color.Black))
                 {
                     g.DrawString(descriptions[i], descFont, descBrush, new RectangleF(x + 10, y + 60, cardWidth - 20, cardHeight - 70));
@@ -541,79 +564,6 @@ public class TuioDemo : Form, TuioListener
         Invalidate();
     }
 
-    private void Stock(Graphics g, TuioObject tobj)
-    {
-        switch (isAdmin)
-        {
-            // admin
-            case true:
-                switch (tobj.SymbolID)
-                {
-                    case 3:
-                        if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
-                        {
-                            stock["sunblock"]++;
-                            itemAdded = true;
-                            itemRemoved = false;
-                        }
-                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && stock["sunblock"] > 0)
-                        {
-                            stock["sunblock"]--;
-                            itemRemoved = true;
-                            itemAdded = false;
-                        }
-                        else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
-                        {
-                            itemAdded = false;
-                            itemRemoved = false;
-                        }
-                        break;
-                    case 5:
-                        if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
-                        {
-                            stock["dermatique"]++;
-                            itemAdded = true;
-                            itemRemoved = false;
-                        }
-                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && stock["dermatique"] > 0)
-                        {
-                            stock["dermatique"]--;
-                            itemRemoved = true;
-                            itemAdded = false;
-                        }
-                        else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
-                        {
-                            itemAdded = false;
-                            itemRemoved = false;
-                        }
-                        break;
-                    case 6:
-                        if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
-                        {
-                            stock["123"]++;
-                            itemAdded = true;
-                            itemRemoved = false;
-                        }
-                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && stock["123"] > 0)
-                        {
-                            stock["123"]--;
-                            itemRemoved = true;
-                            itemAdded = false;
-                        }
-                        else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
-                        {
-                            itemAdded = false;
-                            itemRemoved = false;
-                        }
-                        break;
-                }
-                break;
-            //customer
-            case false:
-
-                break;
-        }
-    }
     private bool latestIdIsOne = false;
     private void drawmenu()
     {
@@ -642,14 +592,65 @@ public class TuioDemo : Form, TuioListener
 
 
     }
+    private void DrawProductDetails(Graphics g, TuioObject tobj, PointF location, Color textColor)
+    {
+        // Updated product details for Degree Cool Rush Deodorant
+        List<string> productDetails = new List<string>
+    {
+        "Brand: Degree",
+        "Type: Cool Rush Deodorant",
+        "Features: 48-hour protection, invigorating Cool Rush scent",
+        "Price: $4.99",
+        "Usage: Apply evenly to underarms for all-day freshness"
+    };
 
+        // Set the starting position for drawing the details
+        float yOffset = 0;
+
+        // Use the provided color for the text
+        using (Brush textBrush = new SolidBrush(textColor))
+        {
+            foreach (var detail in productDetails)
+            {
+                g.DrawString($" {detail}", font, textBrush, new PointF(location.X, location.Y + yOffset));
+                yOffset += font.GetHeight(g) + 2; // Adjust vertical spacing between lines
+            }
+        }
+    }
+
+    private void DrawProductDetails2(Graphics g, TuioObject tobj, PointF location, Color textColor)
+    {
+        // Updated product details for Degree Cool Rush Deodorant
+        List<string> productDetails = new List<string>
+    {
+        "Brand: NOW",
+        "Type: High Potency Vitamin D-3",
+        "Features: 1,000 IU per softgel, supports bone and immune health",
+        "Price: $8",
+        "Usage: Take one softgel daily with a meal, or as directed by a healthcare professional"
+    };
+
+        // Set the starting position for drawing the details
+        float yOffset = 0;
+
+        // Use the provided color for the text
+        using (Brush textBrush = new SolidBrush(textColor))
+        {
+            foreach (var detail in productDetails)
+            {
+                g.DrawString($" {detail}", font, textBrush, new PointF(location.X, location.Y + yOffset));
+                yOffset += font.GetHeight(g) + 2; // Adjust vertical spacing between lines
+            }
+        }
+    }
+   
     protected override void OnPaintBackground(PaintEventArgs pevent)
     {
         bool isId12Present = false;
         bool isId3Present = false;
-        bool isId17Present = false;
+      
         int highlightedIndex = -1;
-        bool aboutus = false;
+
 
         drawmenu();
         Graphics g = pevent.Graphics;
@@ -689,87 +690,97 @@ public class TuioDemo : Form, TuioListener
                 foreach (TuioObject tobj in objectList.Values)
                 {
                     if (tobj.SymbolID == 3) isId3Present = true;
-                    if (tobj.SymbolID == 17) isId17Present = true;
+                   
                 }
                 foreach (TuioObject tobj in objectList.Values)
                 {
                     if (tobj.SymbolID == 5) isId3Present = true;
-                    if (tobj.SymbolID == 17) isId17Present = true;
+                   
                 }
                 foreach (TuioObject tobj in objectList.Values)
                 {
                     if (tobj.SymbolID == 6) isId3Present = true;
-                    if (tobj.SymbolID == 17) isId17Present = true;
+                   
                 }
+
                 foreach (TuioObject tobj in objectList.Values)
                 {
-                    if (tobj.SymbolID == 3)
+                    if (tobj.SymbolID == 3 || tobj.SymbolID == 5 || tobj.SymbolID == 6)
                     {
-                        isId3Present = true;
-                        if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
+                        if (tobj.SymbolID == 3)
                         {
-                            OveralCart++;
-                            itemAdded = true;
-                            itemRemoved = false;
+                            // Update OverallCart based on the angle
+                            if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
+                            {
+                                OveralCart++;
+                                OveralCart3++;
+                                itemAdded = true;
+                                itemRemoved = false;
+                            }
+                            else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && OveralCart > 0)
+                            {
+                                OveralCart--;
+                                OveralCart3--;
+                                itemRemoved = true;
+                                itemAdded = false;
+                            }
+                            else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
+                            {
+                                itemAdded = false;
+                                itemRemoved = false;
+                            }
                         }
-                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && OveralCart > 0)
+                        else if (tobj.SymbolID == 5)
                         {
-                            OveralCart--;
-                            itemRemoved = true;
-                            itemAdded = false;
+                            // Update OverallCart based on the angle
+                            if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
+                            {
+                                OveralCart++;
+                                OveralCart5++;
+                                itemAdded = true;
+                                itemRemoved = false;
+                            }
+                            else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && OveralCart > 0)
+                            {
+                                OveralCart--;
+                                OveralCart5--;
+                                itemRemoved = true;
+                                itemAdded = false;
+                            }
+                            else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
+                            {
+                                itemAdded = false;
+                                itemRemoved = false;
+                            }
                         }
-                        else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
+                        else if (tobj.SymbolID == 6)
                         {
-                            itemAdded = false;
-                            itemRemoved = false;
+                            // Update OverallCart based on the angle
+                            if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
+                            {
+                                OveralCart++;
+                                OveralCart6++;
+                                itemAdded = true;
+                                itemRemoved = false;
+                            }
+                            else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && OveralCart > 0)
+                            {
+                                OveralCart--;
+                                OveralCart6--;
+                                itemRemoved = true;
+                                itemAdded = false;
+                            }
+                            else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
+                            {
+                                itemAdded = false;
+                                itemRemoved = false;
+                            }
                         }
+
+
+
                     }
-                    if (tobj.SymbolID == 6)
-                    {
-                        isId3Present = true;
-                        if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
-                        {
-                            OveralCart++;
-                            itemAdded = true;
-                            itemRemoved = false;
-                        }
-                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && OveralCart > 0)
-                        {
-                            OveralCart--;
-                            itemRemoved = true;
-                            itemAdded = false;
-                        }
-                        else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
-                        {
-                            itemAdded = false;
-                            itemRemoved = false;
-                        }
-                    }
-                    if (tobj.SymbolID == 5)
-                    {
-                        isId3Present = true;
-                        if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
-                        {
-                            OveralCart++;
-                            itemAdded = true;
-                            itemRemoved = false;
-                        }
-                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && OveralCart > 0)
-                        {
-                            OveralCart--;
-                            itemRemoved = true;
-                            itemAdded = false;
-                        }
-                        else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
-                        {
-                            itemAdded = false;
-                            itemRemoved = false;
-                        }
-                    }
-                    if (tobj.SymbolID == 17)
-                    {
-                        isId17Present = true;
-                    }
+
                 }
                 foreach (TuioObject tobj in objectList.Values)
                 {
@@ -777,10 +788,58 @@ public class TuioDemo : Form, TuioListener
                     int oy = tobj.getScreenY(height);
                     int size = height / 10;
                     latestId = tobj.SymbolID;
+                    if (tobj.SymbolID == 45)
+                    {
+                        DrawDeodorantInfo();
+                        if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
+                        {
+                            add45++;
 
-                    if (tobj.SymbolID == 3 && isId17Present && flagg)
+                            itemAdded = true;
+                            itemRemoved = false;
+
+                        }
+                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && add45 > 0)
+                        {
+                            add45--;
+
+                            itemRemoved = true;
+                            itemAdded = false;
+                        }
+                        else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
+                        {
+                            itemAdded = false;
+                            itemRemoved = false;
+                        }
+                    }
+                    else if (tobj.SymbolID == 55)
+                    {
+                        DrawVitaminInfo();
+                        if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
+                        {
+                            add55++;
+
+                            itemAdded55 = true;
+                            itemRemoved55 = false;
+
+                        }
+                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && add45 > 0)
+                        {
+                            add55--;
+
+                            itemRemoved55 = true;
+                            itemAdded55 = false;
+                        }
+                        else if (tobj.AngleDegrees <= 30 || tobj.AngleDegrees >= 310)
+                        {
+                            itemAdded55 = false;
+                            itemRemoved55 = false;
+                        }
+                    }
+                    else if (tobj.SymbolID == 3 && flagg)
                     {
                         flaglogin = false;
+                       
 
                         DrawSunblockInfo(g);
                     }
@@ -792,7 +851,7 @@ public class TuioDemo : Form, TuioListener
                     }
                     else if (tobj.SymbolID == 2 && flagg)
                     {
-                      //  flaglogin = false;
+                        flaglogin = false;
 
                         DrawMenuItems(g, selectedRectangleIndex: -1, flag: false, borderColor: Color.Transparent);
                     }
@@ -812,7 +871,7 @@ public class TuioDemo : Form, TuioListener
                         // flagg = true;
 
                     }
-                    else if (tobj.SymbolID == 5 && isId17Present && flagg)
+                    else if (tobj.SymbolID == 5  && flagg)
                     {
                         flaglogin = false;
 
@@ -843,7 +902,7 @@ public class TuioDemo : Form, TuioListener
 
                         DrawMenuItems(g, selectedRectangleIndex: 1, flag: true, borderColor: Color.Green);
                     }
-                    else if (tobj.SymbolID == 6 && isId17Present && flagg)
+                    else if (tobj.SymbolID == 6  && flagg)
                     {
                         flaglogin = false;
 
@@ -854,6 +913,14 @@ public class TuioDemo : Form, TuioListener
                         flaglogin = false;
 
                         DrawMenuItems(g, selectedRectangleIndex: 2, flag: true, borderColor: Color.Green);
+                    }
+                    else if (tobj.SymbolID == 33)
+                    {
+                        DrawDeodorantInfo();
+                    }
+                    else if (tobj.SymbolID == 13)
+                    {
+                        DrawCrudPage(g);
                     }
                     else
                     {
@@ -906,26 +973,31 @@ public class TuioDemo : Form, TuioListener
                         switch (selectedSliceName)
                         {
                             case "About Us":
-                                aboutus = true;
+                                //aboutus = true;
                                 DrawAboutUsPage(g);
+                                isId17Present = false;
                                 latestId = 11; // Update latestId when SymbolID 17 is detected
                                 break;
                             case "Our Products":
 
                                 latestId = 2;
                                 DrawMenuItems(g, selectedRectangleIndex: -1, flag: false, borderColor: Color.Transparent);
+                                isId17Present = false;
 
                                 break;
                             case "Home Page":
                                 DrawHomePage(g);
                                 latestId = 0;
+                                isId17Present = false;
 
                                 break;
                             case "Cart":
-                                OpenCartPage();
+                                DrawCrudPage(g);
+                                latestId = 13;
+                                isId17Present = false;
                                 break;
                             case "Instructions":
-                                OpenInstructionsPage();
+                                //OpenInstructionsPage();
                                 break;
                             default:
                                 // Default action if needed
@@ -939,22 +1011,16 @@ public class TuioDemo : Form, TuioListener
 
         if (objectList.Count == 0)
         {
-
             // MessageBox.Show("Received data:\n" + msg);
             if (latestId == 4)
             {
                 DrawLoginScreen(g);
             }
-            else if(latestId == 0)
-            {
-                DrawHomePage(g);
-
-            }
-            else if (latestId == 3 && isId17Present && flagg)
+            else if (latestId == 3 && flagg)
             {
                 DrawSunblockInfo(g);
             }
-            else if (latestId == 3 && !isId17Present && flagg)
+            else if (latestId == 3 && flagg)
             {
                 DrawMenuItems(g, selectedRectangleIndex: -1, flag: false, borderColor: Color.Transparent);
             }
@@ -964,7 +1030,7 @@ public class TuioDemo : Form, TuioListener
             }
             else if (latestId == 5 && flagg)
             {
-                DrawMenuItems(g, selectedRectangleIndex: -1, flag: false, borderColor: Color.Transparent);
+                DrawDermatiqueinfo(g);
             }
             else if (latestId == 6 && flagg)
             {
@@ -978,6 +1044,10 @@ public class TuioDemo : Form, TuioListener
             {
                 DrawAboutUsPage(g);
             }
+            else if (latestId == 33)
+            {
+                DrawDeodorantInfo();
+            }
             else if (latestId == 12)
             {
                 int centerX = width / 2;
@@ -989,6 +1059,10 @@ public class TuioDemo : Form, TuioListener
                 g.DrawImage(backgroundImage, 0, 0, width, height);
 
                 DrawCircularMenu(g, centerX, centerY, radius, highlightedIndex);
+            }
+            else if (latestId == 13)
+            {
+                DrawCrudPage(g);
             }
             else if (latestId == 10)
             {
@@ -1002,6 +1076,15 @@ public class TuioDemo : Form, TuioListener
 
                 // Call the DrawCircularMenu function
                 DrawCircularMenu(g, centerX, centerY, radius);
+            }
+            else if(latestId==45)
+            {
+                DrawDeodorantInfo();
+
+            }
+            else if (latestId == 55)
+            {
+                DrawVitaminInfo();
             }
             else if (latestId != 0)
             {
@@ -1082,47 +1165,117 @@ public class TuioDemo : Form, TuioListener
             DrawMenuItems(g, selectedRectangleIndex: -1, flag: false, borderColor: Color.Transparent);
         }
     }
-    private void OpenAboutUsPage()
+    private void SaveUserCartToExcel(string userName, bool showMessage = true)
     {
-        // Code to open the "About Us" page
-        Console.WriteLine("Opening About Us Page");
-    }
+        try
+        {
+            savedInExcel = true;
+            // Map quantities to product names
+            var productQuantities = new Dictionary<string, int>
+        {
+            { "Sunblock", OveralCart3 },
+            { "Dermatique", OveralCart5 },
+            { "Vitamin D-3", add55 },
+            { "Deodorant", add45 }
+        };
 
-    private void OpenProductsPage()
-    {
-        // Code to open the "Our Products" page
-        Console.WriteLine("Opening Our Products Page");
-    }
+            using (var package = new ExcelPackage(new FileInfo(excelFilePath)))
+            {
+                // Get the worksheet by name
+                var worksheet = package.Workbook.Worksheets["Sheet1"];
 
-    private void OpenHomePage()
-    {
-        // Code to open the "Home Page"
-        Console.WriteLine("Opening Home Page");
-    }
+                // Check if the worksheet exists and is not empty
+                if (worksheet == null || worksheet.Dimension == null)
+                {
+                    if (showMessage) MessageBox.Show("The worksheet is empty.");
+                    return;
+                }
 
-    private void OpenCartPage()
-    {
-        // Code to open the "Cart" page
-        Console.WriteLine("Opening Cart Page");
-    }
+                int totalRows = worksheet.Dimension.Rows;
+                bool userExists = false;
 
-    private void OpenInstructionsPage()
-    {
-        // Code to open the "Instructions" page
-        Console.WriteLine("Opening Instructions Page");
+                // Check if the user already exists in the sheet
+                for (int row = 2; row <= totalRows; row++) // Assuming row 1 contains headers
+                {
+                    string nameInRow = worksheet.Cells[row, 1].Text;
+                    MessageBox.Show("in for loop");
+                    if (nameInRow.Equals(userName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        userExists = true;
+                        MessageBox.Show("in condition");
+                        // Clear existing products for the user
+                        //for (int clearRow = row; clearRow <= totalRows; clearRow++)
+                        //{
+                        //    if (worksheet.Cells[clearRow, 1].Text.Equals(userName, StringComparison.OrdinalIgnoreCase))
+                        //    {
+                        //        worksheet.Cells[clearRow, 2].Value = null; // Clear product
+                        //        worksheet.Cells[clearRow, 3].Value = null; // Clear quantity
+                        //    }
+                        //    else
+                        //    {
+                        //        break;
+                        //    }
+                        //}
+
+                        // Add updated product data for the user
+                        foreach (var product in productQuantities)
+                        {
+                            MessageBox.Show("foreach var product");
+                            if (OveralCart3 > 0) // Only add products with non-zero quantities
+                            {
+                                
+                                worksheet.Cells[row, 1].Value = userName;  // Column 1: Name
+                                worksheet.Cells[row, 2].Value = OveralCart3;  // Column 2: Product
+                                worksheet.Cells[row, 3].Value = "sunblock"; // Column 3: Quantity
+                                MessageBox.Show(worksheet.Cells[row, 3].Value?.ToString() ?? "Value is null");
+                                row++;
+                                package.Save();
+                                if (showMessage) MessageBox.Show("User cart successfully updated in Excel.");
+                                return; // Exit function after saving data
+                                
+
+                            }
+                        }
+
+                        // Save and break after updating the user
+                       
+                    }
+                }
+
+                // If the user does not exist, append a new row
+                int nextAvailableRow = totalRows + 1;
+                foreach (var product in productQuantities)
+                {
+                    if (product.Value > 0) // Only add products with non-zero quantities
+                    {
+                        worksheet.Cells[nextAvailableRow, 1].Value = userName;  // Column 1: Name
+                        worksheet.Cells[nextAvailableRow, 2].Value = product.Key;  // Column 2: Product
+                        worksheet.Cells[nextAvailableRow, 3].Value = product.Value; // Column 3: Quantity
+                        nextAvailableRow++;
+                    }
+                }
+
+                // Save and break after adding the user
+                package.Save();
+                if (showMessage) MessageBox.Show("User cart successfully saved to Excel.");
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error saving user cart to Excel: {ex.Message}");
+        }
     }
 
     private void DrawSunblockInfo(Graphics g)
     {
         try
         {
-            if (File.Exists(backgroundPath))
-            {
-                using (Image backgroundImg = Image.FromFile(backgroundPath))
+            
+                using (Image bgImage = Image.FromFile("plain_bk.png"))
                 {
-                    g.DrawImage(backgroundImg, new Rectangle(0, 0, width, height));
+                    g.DrawImage(bgImage, new Rectangle(0, 0, width, height));
                 }
-            }
+            
 
             Rectangle rect = new Rectangle(150, 165, 400, 500);
             Color rectColor = Color.FromArgb(255, 234, 233, 239);
@@ -1137,7 +1290,7 @@ public class TuioDemo : Form, TuioListener
 };
 
             Rectangle rect2 = new Rectangle(150, 165, 400, 500);
-            Font textFont = new Font("Arial", 14, FontStyle.Regular);
+            Font textFont = new Font("Times New Roman", 14, FontStyle.Regular);
             Brush textBrush = new SolidBrush(Color.FromArgb(100, 100, 100));
             int verticalPadding = 95;
             int horizontalPadding = 20;
@@ -1151,7 +1304,20 @@ public class TuioDemo : Form, TuioListener
                     g.DrawImage(img, new Rectangle(width - 600, 50, 400, 600));
                 }
             }
+            string cartText = $"Overall Cart: {OveralCart3}";
+            using (Font cartFont = new Font("Times New Roman", 16, FontStyle.Bold))
+            using (SolidBrush cartBrush = new SolidBrush(Color.Black))
+            {
+                g.DrawString(cartText, cartFont, cartBrush, new PointF(20, 20)); // Adjust the position as needed
+            }
+            string cartTextt = $"allcartitems: {OveralCart}";
+            using (Font cartFont = new Font("Times New Roman", 16, FontStyle.Bold))
+            using (SolidBrush cartBrush = new SolidBrush(Color.Black))
+            {
+                g.DrawString(cartTextt, cartFont, cartBrush, new PointF(50, 50)); // Adjust the position as needed
+            }
         }
+
         catch (Exception ex)
         {
             Console.WriteLine("Error drawing sunblock info: " + ex.Message);
@@ -1215,82 +1381,115 @@ public class TuioDemo : Form, TuioListener
     {
         try
         {
-            // Path to the background image
-            string backgroundPath = "plain_bk.png"; // Update this path if needed
+            // Get canvas dimensions
+            int canvasWidth = (int)g.VisibleClipBounds.Width;
+            int canvasHeight = (int)g.VisibleClipBounds.Height;
 
-            // Check if the background image exists
+            // Number of items per row and total rows needed
+            int itemsPerRow = 3; // 3 items per row
+            int totalRows = (int)Math.Ceiling(productRectangles.Count / (float)itemsPerRow);
+
+            // Adjust padding and calculate smaller dimensions for the rectangles
+            int padding = 80; // Space between items
+            int rectWidth = (canvasWidth - (padding * (itemsPerRow + 1))) / itemsPerRow - 80; // Reduced width
+            int rectHeight = (int)(rectWidth * 1.0); // Aspect ratio of 1.0 (square-like)
+
+            // Total grid height calculation
+            int totalGridHeight = totalRows * (rectHeight + padding) - padding;
+
+            // Center the grid vertically and horizontally
+            int totalGridWidth = itemsPerRow * (rectWidth + padding) - padding;
+            int offsetX = (canvasWidth - totalGridWidth) / 2;
+            int offsetY = (canvasHeight - totalGridHeight) / 2;
+
+            // Path to the background image
+            string backgroundPath = "plain_bk.png";
+
+            // Draw the background
             if (File.Exists(backgroundPath))
             {
-                // Load and draw the background image
                 using (Image backgroundImg = Image.FromFile(backgroundPath))
                 {
-                    // Draw the background image to fill the entire window
-                    g.DrawImage(backgroundImg, new Rectangle(0, 0, width, height));
+                    g.DrawImage(backgroundImg, new Rectangle(0, 0, canvasWidth, canvasHeight));
                 }
             }
-            else
-            {
-                Console.WriteLine("Background image not found.");
-            }
 
-            // Loop through each product rectangle to draw product details
+            // Loop through each product rectangle
             for (int i = 0; i < productRectangles.Count; i++)
             {
-                // Draw the main product display rectangle without rounded corners
-                Rectangle productRect = productRectangles[i].Item1;
+                // Calculate row and column for the current item
+                int row = i / itemsPerRow;
+                int col = i % itemsPerRow;
+
+                // Calculate position with padding and offsets for centering
+                int x = offsetX + col * (rectWidth + padding);
+                int y = offsetY + row * (rectHeight + padding);
+
+                // Define product rectangle
+                Rectangle productRect = new Rectangle(x, y, rectWidth, rectHeight);
                 Color productRectColor = Color.FromArgb(255, 234, 233, 239);
 
-                // Draw rectangle with border if selected, else no border
+                // Draw rectangle border
                 bool drawBorder = (flag && i == selectedRectangleIndex);
                 Color effectiveBorderColor = drawBorder ? borderColor : productRectColor;
-                int borderWidth = drawBorder ? 3 : 0; // Adjust width if selected
+                int borderWidth = drawBorder ? 3 : 0;
 
                 DrawRectangleBorder(g, productRect, productRectColor, effectiveBorderColor, borderWidth, drawBorder);
 
-                // Draw the product image inside the rectangle without changing its location
+                // Draw the product image
                 if (File.Exists(imagePaths[i]))
                 {
-                    using (Image productImg = Image.FromFile(imagePaths[i]))
+                    using (Bitmap productImg = new Bitmap(imagePaths[i]))
                     {
-                        int imgX, imgY, imgWidth, imgHeight;
+                        Color transparentColor = productImg.GetPixel(0, 0);
+                        productImg.MakeTransparent(transparentColor);
 
-                        if (i == 0)
-                        {
-                            imgX = (productRect.X + (productRect.Width - 200) / 2) - 40;
-                            imgY = productRect.Y - 20;
-                            imgWidth = 280;
-                            imgHeight = 400;
-                        }
-                        else
-                        {
-                            imgX = productRect.X + (productRect.Width - 200) / 2;
-                            imgY = productRect.Y + 20;
-                            imgWidth = 200;
-                            imgHeight = 350;
-                        }
+                        // Scale image proportionally to fit inside the rectangle
+                        int imgWidth = (int)(rectWidth * 0.6f); // Reduced size for better fit
+                        int imgHeight = (int)(rectHeight * 0.6f);
+
+                        // Center the image within the rectangle
+                        int imgX = x + (rectWidth - imgWidth) / 2;
+                        int imgY = y + (rectHeight - imgHeight - (int)(rectHeight * 0.2f)) / 2;
 
                         g.DrawImage(productImg, new Rectangle(imgX, imgY, imgWidth, imgHeight));
                     }
                 }
 
-                // Set text based on index
-                string bottomText = i == 0 ? "Sunblock" : "Cleansing Gel";
+                // Define and draw the pink text section BELOW the product rectangle
+                int textSectionHeight = (int)(rectHeight * 0.15f); // Reduced height of text section
+                Rectangle bottomTextRect = new Rectangle(
+                    x,
+                    y + rectHeight - 10, // Position it just below the product rectangle
+                    rectWidth,
+                    textSectionHeight
+                );
 
-                // Draw the pink section at the bottom
-                Rectangle bottomTextRect = productRectangles[i].Item2;
                 using (SolidBrush pinkBrush = new SolidBrush(Color.FromArgb(255, 254, 81, 161)))
                 {
                     g.FillRectangle(pinkBrush, bottomTextRect);
                 }
 
                 // Draw text inside the pink section
-                using (Font textFont = new Font("Arial", 14, FontStyle.Bold))
+                string bottomText;
+                switch (i)
+                {
+                    case 0: bottomText = "Dermatique"; break;
+                    case 1: bottomText = "Sunblock"; break;
+                    case 2: bottomText = "Deodorant"; break;
+                    case 3: bottomText = "Nivea Cream"; break;
+                    case 4: bottomText = "Vitamin D-3"; break;
+                    case 5: bottomText = "One Two Three Medicine"; break;
+                    default: bottomText = "Unknown"; break;
+                }
+
+                using (Font textFont = new Font("Times New Roman", 12, FontStyle.Bold)) // Adjust font size if needed
                 using (Brush textBrush = new SolidBrush(Color.White))
                 {
                     SizeF textSize = g.MeasureString(bottomText, textFont);
                     PointF textLocation = new PointF(
-                        bottomTextRect.X + (bottomTextRect.Width - textSize.Width) / 2,
-                        bottomTextRect.Y + (bottomTextRect.Height - textSize.Height) / 23
+                        bottomTextRect.X + (bottomTextRect.Width - textSize.Width) / 2.0f,
+                        bottomTextRect.Y + (bottomTextRect.Height - textSize.Height) / 2.0f
                     );
                     g.DrawString(bottomText, textFont, textBrush, textLocation);
                 }
@@ -1301,6 +1500,7 @@ public class TuioDemo : Form, TuioListener
             Console.WriteLine("Error drawing product display: " + ex.Message);
         }
     }
+
 
     private void DrawRectangleBorder(Graphics g, Rectangle rect, Color rectColor, Color borderColor, int borderWidth, bool drawBorder)
     {
@@ -1347,7 +1547,7 @@ public class TuioDemo : Form, TuioListener
 
             // Draw instructions or header
             string headerText = "Admin Menu";
-            using (Font headerFont = new Font("Arial", 18, FontStyle.Bold))
+            using (Font headerFont = new Font("Times New Roman", 18, FontStyle.Bold))
             using (Brush headerBrush = new SolidBrush(Color.Black))
             {
                 SizeF headerSize = g.MeasureString(headerText, headerFont);
@@ -1364,13 +1564,12 @@ public class TuioDemo : Form, TuioListener
     {
         try
         {
-            if (File.Exists(backgroundPath))
-            {
-                using (Image backgroundImg = Image.FromFile(backgroundPath))
+           
+                using (Image bgImage = Image.FromFile("plain_bk.png"))
                 {
-                    g.DrawImage(backgroundImg, new Rectangle(0, 0, width, height));
+                    g.DrawImage(bgImage, new Rectangle(0, 0, width, height));
                 }
-            }
+            
 
             Rectangle rect = new Rectangle(150, 165, 400, 500);
             Color rectColor = Color.FromArgb(255, 234, 233, 239);
@@ -1383,7 +1582,7 @@ public class TuioDemo : Form, TuioListener
     "Use: Apply to damp skin, massage, and rinse."
 };
             Rectangle rect2 = new Rectangle(150, 165, 400, 500);
-            Font textFont = new Font("Arial", 14, FontStyle.Regular);
+            Font textFont = new Font("Times New Roman", 14, FontStyle.Regular);
             Brush textBrush = new SolidBrush(Color.FromArgb(100, 100, 100));
             int verticalPadding = 95;
             int horizontalPadding = 20;
@@ -1396,6 +1595,18 @@ public class TuioDemo : Form, TuioListener
                 {
                     g.DrawImage(img, new Rectangle(width - 600, 50, 400, 600));
                 }
+            }
+            string cartText = $"this product cart: {OveralCart5}";
+            using (Font cartFont = new Font("Times New Roman", 16, FontStyle.Bold))
+            using (SolidBrush cartBrush = new SolidBrush(Color.Black))
+            {
+                g.DrawString(cartText, cartFont, cartBrush, new PointF(20, 20)); // Adjust the position as needed
+            }
+            string cartTextt = $"allcartitems: {OveralCart5}";
+            using (Font cartFont = new Font("Times New Roman", 16, FontStyle.Bold))
+            using (SolidBrush cartBrush = new SolidBrush(Color.Black))
+            {
+                g.DrawString(cartTextt, cartFont, cartBrush, new PointF(50, 50)); // Adjust the position as needed
             }
         }
         catch (Exception ex)
@@ -1420,98 +1631,7 @@ public class TuioDemo : Form, TuioListener
             startY += lineHeight + lineSpacing;
         }
     }
-    private void DrawProductPage(Graphics g, string productName, string productImagePath, string backgroundImagePath)
-    {
-        try
-        {
-            if (!File.Exists(productImagePath))
-            {
-                throw new Exception($"No such product image named {productImagePath}");
-            }
-            if (!File.Exists(backgroundImagePath))
-            {
-                throw new Exception($"No such background image named {backgroundImagePath}");
-            }
-            using (Image bgImage = Image.FromFile(backgroundImagePath))
-            {
-                g.DrawImage(bgImage, new Rectangle(0, 0, width, height));
-            }
-            List<string> productText = new List<string>();
-            Image img = Image.FromFile(productImagePath);
-            Font font = new Font("Verdana", 15);
-            SolidBrush brush = new SolidBrush(Color.Black);
-            float x = 0, y = 0;
-            switch (productName)
-            {
-                case "sunblock":
-                    productText = new List<string>() {
-                        "Dermatique Sunblock: Broad-spectrum SPF protection.",
-                        "Lightweight, non-greasy, and quick-absorbing formula.",
-                        "Hydrates skin while shielding from UV damage.",
-                        "Ideal for daily use on all skin types."
-                    };
-                    g.DrawImage(img, new Rectangle((width / 2) - 400, (height / 2) - 600, 400, 600));
-                    x = width / 4;
-                    y = (float)(height / 1.5);
-                    foreach (string text in productText)
-                    {
-                        g.DrawString(text, font, brush, new PointF(x, y));
-                        y += 20;
-                    }
-                    g.DrawString($"In-Stock: {stock["sunblock"]}", font, brush, new Point(30, 30));
-                    if (!isAdmin) g.DrawString($"Your cart: {cart["sunblock"]}", font, brush, new Point(60, 30));
-                    break;
-                case "dermatique":
-                    productText = new List<string>() {
-                        "Brand: Dermatique",
-                        "Type: Purifying Cleansing Gel",
-                        "Volume: 150ml",
-                        "Features: Deep cleansing, suitable for all skin types",
-                        "Price: $15.99",
-                        "Usage: Apply a small amount to wet skin, massage, and rinse."
-                    };
-                    g.DrawImage(img, new Rectangle((width / 2) - 400, (height / 2) - 600, 400, 600));
-                    x = width / 4;
-                    y = (float)(height / 1.5);
-                    foreach (string text in productText)
-                    {
-                        g.DrawString(text, font, brush, new PointF(x, y));
-                        y += 20;
-                    }
-                    g.DrawString($"In-Stock: {stock["dermatique"]}", font, brush, new Point(30, 30));
-                    if (!isAdmin) g.DrawString($"Your cart: {cart["dermatique"]}", font, brush, new Point(60, 30));
-                    break;
-                case "123":
-                    productText = new List<string>() {
-                        "Dermatique Facial Wash: Daily purifying formula.",
-                        "Botanicals cleanse deeply without drying.",
-                        "Suitable for all skin types, including sensitive.",
-                        "Use: Apply to damp skin, massage, and rinse."
-                    };
-                    g.DrawImage(img, new Rectangle((width / 2) - 400, (height / 2) - 600, img.Width / 2, img.Height / 2));
-                    x = width / 4;
-                    y = (float)(height / 1.5);
-                    foreach (string text in productText)
-                    {
-                        g.DrawString(text, font, brush, new PointF(x, y));
-                        y += 20;
-                    }
-                    g.DrawString($"In-Stock: {stock["123"]}", font, brush, new Point(30, 30));
-                    if (!isAdmin) g.DrawString($"Your cart: {cart["123"]}", font, brush, new Point(60, 30));
-                    break;
-            }
-            using (Font helpFont = new Font("Verdana", 18, FontStyle.Bold))
-            using (SolidBrush helpBrush = new SolidBrush(Color.Gray))
-            {
-                string helpText = "For instructions, show Marker 7";
-                g.DrawString(helpText, helpFont, helpBrush, width - 450, 10);
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"An error occured loading images: {ex.Message}");
-        }
-    }
+    
     private void DrawRoundedRectangle(Graphics g, Rectangle rect, Color rectColor, int cornerRadius, Color borderColor, int flag)
     {
         using (GraphicsPath path = new GraphicsPath())
@@ -1605,40 +1725,165 @@ public class TuioDemo : Form, TuioListener
     }
     private void DrawVitaminInfo()
     {
+
+        int size = height / 10;
         using (Graphics g = this.CreateGraphics())
         {
-            // Load the background image
-            Image backgroundImage = Image.FromFile("plain_bk.png");
+            // Load the background and deodorant images
+            Bitmap background = new Bitmap("lightgreen.jpg");
+            g.DrawImage(background, new Rectangle(0, 0, width, height));
 
-            // Draw the background image (fill the entire form)
-            g.DrawImage(backgroundImage, 0, 0, this.Width, this.Height);
+            Bitmap dermatiqueImage = new Bitmap("Vitamin.jpeg");
+            dermatiqueImage.MakeTransparent(dermatiqueImage.GetPixel(0, 0));
+            lastObjectImage = dermatiqueImage; // Store the image as the last known object image
 
-            // Now draw the Vitamin information on top of the background
-            g.DrawString("Vitamin Information", new Font("Arial", 24), Brushes.Black, new PointF(100, 100));
-            g.DrawString("Vitamin A: Helps vision and immune system", new Font("Arial", 14), Brushes.Black, new PointF(100, 150));
-            g.DrawString("Vitamin C: Boosts immunity and skin health", new Font("Arial", 14), Brushes.Black, new PointF(100, 200));
-            // Add more information as needed
+            // Set positions for the image and details
+            int staticX = width / 2 - 500; // Static position for the image
+            int staticY = height / 2 - 200;
+            int newSize = size * 4;
+
+            // Draw the deodorant image
+            g.DrawImage(lastObjectImage, new Rectangle(staticX - newSize / 2, staticY - newSize / 2, newSize, newSize));
+
+            // Draw product name and details
+            string displayText = "Vitamin D-3";
+            Color textColor = Color.Orange;
+            using (Brush textBrush = new SolidBrush(textColor))
+            {
+                g.DrawString(displayText, font, textBrush, new PointF(staticX - 100, staticY + newSize / 2 - 500));
+            }
+
+            PointF detailsLocation = new PointF(staticX + 350, staticY + newSize / 2 - 300);
+            DrawProductDetails2(g, null, detailsLocation, textColor);
+
+            // Add buttons for increment, decrement, and "Add to Cart"
+            int buttonWidth = 120;
+            int buttonHeight = 40;
+            int marginTop = 60;
+
+            // Decrement button
+            Rectangle decrementButton = new Rectangle(staticX - 100, staticY + newSize / 2 + 100, 40, buttonHeight);
+            g.FillRectangle(Brushes.LightGray, decrementButton);
+            g.DrawRectangle(Pens.Black, decrementButton);
+            g.DrawString("-", new Font("Times New Roman", 30), Brushes.Black, decrementButton, new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center
+            });
+
+            // Quantity display box
+            Rectangle quantityBox = new Rectangle(staticX - 50, staticY + newSize / 2 + 100, 80, buttonHeight);
+            g.FillRectangle(Brushes.White, quantityBox);
+            g.DrawRectangle(Pens.Black, quantityBox);
+            string cartText = $"{add55}";
+            g.DrawString(cartText, new Font("Times New Roman", 28), Brushes.Black, quantityBox, new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center
+            });
+
+            // Increment button
+            Rectangle incrementButton = new Rectangle(staticX + 40, staticY + newSize / 2 + 100, 40, buttonHeight);
+            g.FillRectangle(Brushes.LightGray, incrementButton);
+            g.DrawRectangle(Pens.Black, incrementButton);
+            g.DrawString("+", new Font("Times New Roman", 18), Brushes.Black, incrementButton, new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center
+            });
+
+            // Add to Cart button
+            Rectangle addToCartButton = new Rectangle(staticX - 70, staticY + newSize / 2 + 40, buttonWidth, buttonHeight);
+            g.FillRectangle(Brushes.LightGray, addToCartButton);
+            g.DrawRectangle(Pens.Black, addToCartButton);
+            g.DrawString("Add To Cart", new Font("Times New Roman", 12, FontStyle.Bold), Brushes.Black, addToCartButton, new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center
+            });
         }
     }
-
     // Method to draw Deodorant information with background
     private void DrawDeodorantInfo()
     {
+        int size = height / 10;
         using (Graphics g = this.CreateGraphics())
         {
-            // Load the background image
-            Image backgroundImage = Image.FromFile("plain_bk.png");
+            // Load the background and deodorant images
+            Bitmap background = new Bitmap("Backk.jpg");
+            g.DrawImage(background, new Rectangle(0, 0, width, height));
 
-            // Draw the background image (fill the entire form)
-            g.DrawImage(backgroundImage, 0, 0, this.Width, this.Height);
+            Bitmap dermatiqueImage = new Bitmap("Deodrant.jpeg");
+            dermatiqueImage.MakeTransparent(dermatiqueImage.GetPixel(0, 0));
+            lastObjectImage = dermatiqueImage; // Store the image as the last known object image
 
-            // Now draw the Deodorant information on top of the background
-            g.DrawString("Deodorant Information", new Font("Arial", 24), Brushes.Black, new PointF(100, 100));
-            g.DrawString("Deodorant: Keeps you fresh and odor-free", new Font("Arial", 14), Brushes.Black, new PointF(100, 150));
-            g.DrawString("Antiperspirants: Prevents sweat buildup", new Font("Arial", 14), Brushes.Black, new PointF(100, 200));
-            // Add more information as needed
+            // Set positions for the image and details
+            int staticX = width / 2 - 500; // Static position for the image
+            int staticY = height / 2 - 200;
+            int newSize = size * 4;
+
+            // Draw the deodorant image
+            g.DrawImage(lastObjectImage, new Rectangle(staticX - newSize / 2, staticY - newSize / 2, newSize, newSize));
+
+            // Draw product name and details
+            string displayText = "Degree Cool Rush Deodorant";
+            Color textColor = Color.White;
+            using (Brush textBrush = new SolidBrush(textColor))
+            {
+                g.DrawString(displayText, font, textBrush, new PointF(staticX - 200, staticY + newSize / 2 - 500));
+            }
+
+            PointF detailsLocation = new PointF(staticX + 500, staticY + newSize / 2 - 300);
+            DrawProductDetails(g, null, detailsLocation, textColor);
+
+            // Add buttons for increment, decrement, and "Add to Cart"
+            int buttonWidth = 120;
+            int buttonHeight = 40;
+            int marginTop = 60;
+
+            // Decrement button
+            Rectangle decrementButton = new Rectangle(staticX - 100, staticY + newSize / 2 + 100, 40, buttonHeight);
+            g.FillRectangle(Brushes.LightGray, decrementButton);
+            g.DrawRectangle(Pens.Black, decrementButton);
+            g.DrawString("-", new Font("Times New Roman", 30), Brushes.Black, decrementButton, new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center
+            });
+
+            // Quantity display box
+            Rectangle quantityBox = new Rectangle(staticX - 50, staticY + newSize / 2 + 100, 80, buttonHeight);
+            g.FillRectangle(Brushes.White, quantityBox);
+            g.DrawRectangle(Pens.Black, quantityBox);
+            string cartText = $"{add45}";
+            g.DrawString(cartText, new Font("Times New Roman", 28), Brushes.Black, quantityBox, new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center
+            });
+
+            // Increment button
+            Rectangle incrementButton = new Rectangle(staticX + 40, staticY + newSize / 2 + 100, 40, buttonHeight);
+            g.FillRectangle(Brushes.LightGray, incrementButton);
+            g.DrawRectangle(Pens.Black, incrementButton);
+            g.DrawString("+", new Font("Times New Roman", 18), Brushes.Black, incrementButton, new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center
+            });
+
+            // Add to Cart button
+            Rectangle addToCartButton = new Rectangle(staticX - 70, staticY + newSize / 2 + 40, buttonWidth, buttonHeight);
+            g.FillRectangle(Brushes.LightGray, addToCartButton);
+            g.DrawRectangle(Pens.Black, addToCartButton);
+            g.DrawString("Add To Cart", new Font("Times New Roman", 12, FontStyle.Bold), Brushes.Black, addToCartButton, new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center
+            });
         }
     }
+    
     private void DrawLoginScreen(Graphics g)
     {
         try
@@ -1661,7 +1906,7 @@ public class TuioDemo : Form, TuioListener
             DrawRoundedButton(g, adminButtonRect, "Login as Admin");
 
             string open = "Please open your bluetooth";
-            Font openFont = new Font("Arial", 12, FontStyle.Italic | FontStyle.Bold);
+            Font openFont = new Font("Times New Roman", 12, FontStyle.Italic | FontStyle.Bold);
             Brush openBrush = new SolidBrush(Color.DarkSlateBlue);
 
             PointF openPosition = new PointF(
@@ -1684,6 +1929,260 @@ public class TuioDemo : Form, TuioListener
         }
 
     }
+    private void DrawCrudPage(Graphics g)
+    {
+        try
+        {
+            // Background with a gradient effect
+            using (LinearGradientBrush backgroundBrush = new LinearGradientBrush(
+                new Rectangle(0, 0, width, height),
+                Color.FromArgb(255, 240, 248, 255),
+                Color.FromArgb(255, 173, 216, 230),
+                LinearGradientMode.Vertical))
+            {
+                g.FillRectangle(backgroundBrush, new Rectangle(0, 0, width, height));
+            }
+
+            // Title with a shadow effect
+            string title = "Your Shopping Cart";
+            string backgroundImagePath = "about_us_bgg.jpg"; // Replace with your actual background image path
+            if (File.Exists(backgroundImagePath))
+            {
+                using (Image bgImage = Image.FromFile(backgroundImagePath))
+                {
+                    g.DrawImage(bgImage, new Rectangle(0, 0, width, height));
+                }
+            }
+            using (Font titleFont = new Font("Times New Roman", 32, FontStyle.Bold))
+            using (Brush shadowBrush = new SolidBrush(Color.Gray))
+            using (Brush titleBrush = new SolidBrush(Color.DarkSlateBlue))
+            {
+                SizeF titleSize = g.MeasureString(title, titleFont);
+                PointF titleLocation = new PointF((width - titleSize.Width) / 2, 30);
+
+                // Shadow for depth
+                g.DrawString(title, titleFont, shadowBrush, new PointF(titleLocation.X + 3, titleLocation.Y + 3));
+                g.DrawString(title, titleFont, titleBrush, titleLocation);
+            }
+
+            // Card-style display for each product
+            int startX = 100;
+            int startY = 150;
+            int spacingY = 220;
+
+            // Display Sunblock product
+            if (OveralCart3 > 0)
+            {
+                DrawProductCard(g, startX, startY, "Sunblock", OveralCart3, imagePaths[0]);
+                startY += spacingY;
+            }
+
+            // Display Dermatique product
+            if (OveralCart5 > 0)
+            {
+                DrawProductCard(g, startX, startY, "Dermatique", OveralCart5, imagePaths[1]);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error drawing CRUD page: {ex.Message}");
+        }
+
+        // Save user cart to Excel without showing a message
+        if (savedInExcel == false)
+        {
+            SaveUserCartToExcel(currentUserName, false);
+        }
+    }
+
+    private void DrawProductCard(Graphics g, int startX, int startY, string productName, int productCount, string productImagePath)
+    {
+        try
+        {
+            // Card background with rounded corners
+            Rectangle cardRect = new Rectangle(startX, startY, 700, 180);
+            using (GraphicsPath cardPath = new GraphicsPath())
+            {
+                int cornerRadius = 20;
+                cardPath.AddArc(cardRect.X, cardRect.Y, cornerRadius, cornerRadius, 180, 90);
+                cardPath.AddArc(cardRect.Right - cornerRadius, cardRect.Y, cornerRadius, cornerRadius, 270, 90);
+                cardPath.AddArc(cardRect.Right - cornerRadius, cardRect.Bottom - cornerRadius, cornerRadius, cornerRadius, 0, 90);
+                cardPath.AddArc(cardRect.X, cardRect.Bottom - cornerRadius, cornerRadius, cornerRadius, 90, 90);
+                cardPath.CloseFigure();
+
+                using (SolidBrush cardBrush = new SolidBrush(Color.White))
+                {
+                    g.FillPath(cardBrush, cardPath);
+                }
+
+                using (Pen borderPen = new Pen(Color.FromArgb(173, 216, 230), 3))
+                {
+                    g.DrawPath(borderPen, cardPath);
+                }
+            }
+
+            // Product image
+            if (File.Exists(productImagePath))
+            {
+                using (Image productImage = Image.FromFile(productImagePath))
+                {
+                    g.DrawImage(productImage, new Rectangle(startX + 20, startY + 15, 150, 150));
+                }
+            }
+
+            // Product name and quantity
+            string productInfo = $"{productName}\nQuantity: {productCount}";
+            using (Font productFont = new Font("Times New Roman", 14, FontStyle.Bold))
+            using (Brush productBrush = new SolidBrush(Color.DarkSlateGray))
+            {
+                g.DrawString(productInfo, productFont, productBrush, new PointF(startX + 200, startY + 30));
+            }
+
+            // "Delete" button
+            Rectangle deleteButtonRect = new Rectangle(startX + 500, startY + 40, 150, 40);
+            DrawModernButton(g, deleteButtonRect, "Delete", Color.IndianRed);
+
+            // "Update" button
+            Rectangle updateButtonRect = new Rectangle(startX + 500, startY + 100, 150, 40);
+            DrawModernButton(g, updateButtonRect, "Update", Color.MediumSeaGreen);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error displaying product card: {ex.Message}");
+        }
+    }
+
+    private void DrawModernButton(Graphics g, Rectangle buttonRect, string buttonText, Color buttonColor)
+    {
+        using (GraphicsPath buttonPath = new GraphicsPath())
+        {
+            int cornerRadius = 10;
+            buttonPath.AddArc(buttonRect.X, buttonRect.Y, cornerRadius, cornerRadius, 180, 90);
+            buttonPath.AddArc(buttonRect.Right - cornerRadius, buttonRect.Y, cornerRadius, cornerRadius, 270, 90);
+            buttonPath.AddArc(buttonRect.Right - cornerRadius, buttonRect.Bottom - cornerRadius, cornerRadius, cornerRadius, 0, 90);
+            buttonPath.AddArc(buttonRect.X, buttonRect.Bottom - cornerRadius, cornerRadius, cornerRadius, 90, 90);
+            buttonPath.CloseFigure();
+
+            using (LinearGradientBrush buttonBrush = new LinearGradientBrush(
+                buttonRect,
+                buttonColor,
+                Color.White,
+                LinearGradientMode.Vertical))
+            {
+                g.FillPath(buttonBrush, buttonPath);
+            }
+
+            using (Pen borderPen = new Pen(Color.DarkGray, 2))
+            {
+                g.DrawPath(borderPen, buttonPath);
+            }
+
+            using (Font buttonFont = new Font("Times New Roman", 12, FontStyle.Bold))
+            using (Brush textBrush = new SolidBrush(Color.White))
+            {
+                SizeF textSize = g.MeasureString(buttonText, buttonFont);
+                PointF textLocation = new PointF(
+                    buttonRect.X + (buttonRect.Width - textSize.Width) / 2,
+                    buttonRect.Y + (buttonRect.Height - textSize.Height) / 2);
+                g.DrawString(buttonText, buttonFont, textBrush, textLocation);
+            }
+        }
+    }
+
+
+    private void DisplayProductWithButtons(Graphics g, int startX, int startY, string productName, int productCount, string productImagePath)
+    {
+        try
+        {
+            // Draw product image
+            if (File.Exists(productImagePath))
+            {
+                using (Image productImage = Image.FromFile(productImagePath))
+                {
+                    g.DrawImage(productImage, new Rectangle(startX, startY, 150, 150)); // Adjust size and position
+                }
+            }
+
+            // Draw product name and count
+            string productInfo = $"{productName}\nCount: {productCount}";
+            using (Font infoFont = new Font("Times New Roman", 14))
+            using (Brush infoBrush = new SolidBrush(Color.Black))
+            {
+                g.DrawString(productInfo, infoFont, infoBrush, new PointF(startX + 180, startY + 30)); // Adjust position
+            }
+
+            // Draw "Delete" button
+            Rectangle deleteButtonRect = new Rectangle(startX + 350, startY + 30, 100, 40);
+            DrawRoundedButton(g, deleteButtonRect, "Delete");
+
+            // Draw "Update" button
+            Rectangle updateButtonRect = new Rectangle(startX + 350, startY + 100, 100, 40);
+            DrawRoundedButton(g, updateButtonRect, "Update");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error displaying product: {ex.Message}");
+        }
+    }
+
+    private void DisplayProductInfo(Graphics g, int startX, int startY, string productName, int productCount, string productImagePath)
+    {
+        // Display product image
+        if (File.Exists(productImagePath))
+        {
+            using (Image productImage = Image.FromFile(productImagePath))
+            {
+                g.DrawImage(productImage, new Rectangle(startX, startY, 150, 150)); // Adjust size and position
+            }
+        }
+
+        // Display product name and count
+        string productInfo = $"{productName}\nCount: {productCount}";
+        using (Font infoFont = new Font("Times New Roman", 14))
+        using (Brush infoBrush = new SolidBrush(Color.Black))
+        {
+            g.DrawString(productInfo, infoFont, infoBrush, new PointF(startX + 200, startY + 50)); // Adjust position
+        }
+    }
+
+
+    private void DrawButton(Graphics g, Rectangle buttonRect, string buttonText, Color buttonColor)
+    {
+        using (GraphicsPath path = new GraphicsPath())
+        {
+            int cornerRadius = 15;
+            path.AddArc(buttonRect.X, buttonRect.Y, cornerRadius, cornerRadius, 180, 90);
+            path.AddArc(buttonRect.X + buttonRect.Width - cornerRadius, buttonRect.Y, cornerRadius, cornerRadius, 270, 90);
+            path.AddArc(buttonRect.X + buttonRect.Width - cornerRadius, buttonRect.Y + buttonRect.Height - cornerRadius, cornerRadius, cornerRadius, 0, 90);
+            path.AddArc(buttonRect.X, buttonRect.Y + buttonRect.Height - cornerRadius, cornerRadius, cornerRadius, 90, 90);
+            path.CloseAllFigures();
+
+            // Fill button
+            using (SolidBrush brush = new SolidBrush(buttonColor))
+            {
+                g.FillPath(brush, path);
+            }
+
+            // Draw border
+            using (Pen pen = new Pen(Color.Black, 2))
+            {
+                g.DrawPath(pen, path);
+            }
+
+            // Draw text
+            using (Font font = new Font("Times New Roman", 12, FontStyle.Bold))
+            using (SolidBrush textBrush = new SolidBrush(Color.Black))
+            {
+                SizeF textSize = g.MeasureString(buttonText, font);
+                PointF textLocation = new PointF(
+                    buttonRect.X + (buttonRect.Width - textSize.Width) / 2,
+                    buttonRect.Y + (buttonRect.Height - textSize.Height) / 2
+                );
+                g.DrawString(buttonText, font, textBrush, textLocation);
+            }
+        }
+    }
+
 
     private void DrawRoundedButton(Graphics g, Rectangle buttonRect, string buttonText)
     {
@@ -1709,7 +2208,7 @@ public class TuioDemo : Form, TuioListener
             }
 
             // Draw button text
-            using (Font buttonFont = new Font("Arial", 12, FontStyle.Bold))
+            using (Font buttonFont = new Font("Times New Roman", 12, FontStyle.Bold))
             using (SolidBrush buttonTextBrush = new SolidBrush(Color.White))
             {
                 SizeF textSize = g.MeasureString(buttonText, buttonFont);
@@ -1721,6 +2220,59 @@ public class TuioDemo : Form, TuioListener
             }
         }
     }
+    private void LoadUserProfile(string userName)
+    {
+        try
+        {
+            using (var package = new ExcelPackage(new FileInfo(excelFilePath)))
+            {
+                // Get the worksheet by name (update "Sheet1" to match your sheet name)
+                var worksheet = package.Workbook.Worksheets["Sheet1"];
+
+                // Check if the worksheet is empty
+                if (worksheet.Dimension == null)
+                {
+                    MessageBox.Show("The worksheet is empty.");
+                    return;
+                }
+
+                // Get the total rows and columns
+                int totalRows = worksheet.Dimension.Rows;
+
+                bool userFound = false;
+
+                // Iterate through each row
+                for (int row = 2; row <= totalRows; row++) // Assuming row 1 contains headers
+                {
+                    string nameInRow = worksheet.Cells[row, 1].Text; // Column 1 contains names
+
+                    if (nameInRow.Equals(userName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        userFound = true;
+
+                        // Fetch relevant user data
+                        string product = worksheet.Cells[row, 2].Text;  // Column 2: Product
+                        string quantity = worksheet.Cells[row, 3].Text; // Column 3: Quantity
+                        string emotion = worksheet.Cells[row, 4].Text;  // Column 4: Emotion
+
+                        // Display or process the data
+                        MessageBox.Show($"Name: {nameInRow}\nProduct: {product}\nQuantity: {quantity}\nEmotion: {emotion}");
+                    }
+                }
+
+                if (!userFound)
+                {
+                    MessageBox.Show($"No data found for user: {userName}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error reading the Excel file: {ex.Message}");
+        }
+    }
+
+
 
     private void Tutorial(Graphics g)
     {
@@ -1766,6 +2318,14 @@ public class TuioDemo : Form, TuioListener
             g.DrawString("To close this screen, show the product again", textFont, textBrush, textStartX, textStartY);
         }
     }
+    private void Logout()
+    {
+        
+        currentUserName = null;
+        userCart.Clear();
+    }
+
+
     private async Task HandleServerAsync(string server, int port, string serverName)
     {
         try
@@ -1793,38 +2353,55 @@ public class TuioDemo : Form, TuioListener
                             {
                                 string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
 
-                                string[] names = { "tarek", "farah", "youssef", "malak", "roqaia", "rawan", "unknown" };
+                                string[] names = { "tarek", "farah", "youssef", "malak", "roqaia", "rawan" };
 
                                 if (message.ToLower().Contains("vitamin"))
                                 {
                                     // Show message box for vitamin
                                     MessageBox.Show("Received message: Vitamin detected! Displaying Vitamin Info...");
-
+                                    //latestId = 55;
                                     // Call a method to draw the information about Vitamin
                                     Invoke(new Action(() => DrawVitaminInfo()));
+                                    latestId = 55;
+
                                 }
                                 else if (message.ToLower().Contains("deodorant"))
                                 {
                                     // Show message box for deodorant
                                     MessageBox.Show("Received message: Deodorant detected! Displaying Deodorant Info...");
-
                                     // Call a method to draw the information about Deodorant
                                     Invoke(new Action(() => DrawDeodorantInfo()));
+                                    latestId = 45;
+                                    
                                 }
-                                if (facelogin == false)
+                                if (latestId == 4)
                                 {
 
-                                    foreach (var name in names)
+                                    if (facelogin == false)
                                     {
-                                        if (message.ToLower().Contains(name))
+
+                                        foreach (var name in names)
                                         {
-                                            facelogin = true;
-                                            // Show the complete message in a MessageBox
-                                            MessageBox.Show($"Complete Message: {message}");
-                                            break; // Exit the loop once a match is found
+                                            if (message.ToLower().Contains(name))
+                                            {
+                                                currentUserName = name;
+                                                
+                                                LoadUserProfile(currentUserName);
+                           
+                                                facelogin = true;
+                                                // Show the complete message in a MessageBox
+                                                MessageBox.Show($"Complete Message: {message}");
+                                                MessageBox.Show($"Welcome: {name}");
+                                                latestId = 12;
+                                               // Invoke(new Action(() => DrawCrudPage(Graphics.FromHwnd(this.Handle))));
+                                                Invoke(new Action(() => DrawCircularMenu(Graphics.FromHwnd(this.Handle),width/2,height/2,300,-1)));
+
+                                                break; // Exit the loop once a match is found
+                                            }
                                         }
                                     }
                                 }
+                                
 
                                 // Check if the message contains "customer"
                                 if (message.ToLower().Contains("customer") && customer == false)
@@ -1889,6 +2466,7 @@ public class TuioDemo : Form, TuioListener
             });
         }
     }
+   
 
     private void ShowMessageOnScreen(string text, Color color)
     {
@@ -1896,7 +2474,7 @@ public class TuioDemo : Form, TuioListener
         {
             Text = text,
             ForeColor = color,
-            Font = new Font("Arial", 18, FontStyle.Bold),
+            Font = new Font("Times New Roman", 18, FontStyle.Bold),
             AutoSize = true,
             BackColor = Color.Transparent,
             Location = new Point((this.Width - 300) / 2, (this.Height - 50) / 2)
