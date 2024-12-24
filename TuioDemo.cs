@@ -10,8 +10,12 @@ using System.Drawing.Drawing2D;
 using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Text;
+using OfficeOpenXml;
 using System.Collections.Concurrent;
 using System.Linq;
+using OfficeOpenXml.FormulaParsing.Excel.Functions.Text;
+using OfficeOpenXml.FormulaParsing.Excel.Functions.Information;
+using System.Data;
 public class TuioDemo : Form, TuioListener
 {
     private TuioClient client;
@@ -44,7 +48,7 @@ public class TuioDemo : Form, TuioListener
     Pen curPen = new Pen(new SolidBrush(Color.Blue), 1);
     List<Tuple<Rectangle, Rectangle>> productRectangles = new List<Tuple<Rectangle, Rectangle>>();
     private Point lastObjectPosition = Point.Empty;
-    List<string> imagePaths = new List<string> { "dermatique1.png", "Sunblock.png", "Deodrant.jpeg", "NIVEA.jpeg", "Vitamin.jpeg", "123.jpg" };
+    List<string> imagePaths = new List<string> { "Sunblock.png", "dermatique1.png", "Deodrant.jpeg", "NIVEA.jpeg", "Vitamin.jpeg", "123.jpg" };
     string backgroundPath = "Untitled design (3).png";
     bool isAdmin = false;
     bool flagg = true;
@@ -59,12 +63,21 @@ public class TuioDemo : Form, TuioListener
     int OveralCart3 = 0;
     int OveralCart5 = 0;
     int OveralCart6 = 0;
+    bool isright= false;
+    bool isleft = false;
     bool isId17Present = false;
     private float rotationAngle = 0f; // Class-level variable for rotation
     int add45 = 0;
     int add55 = 0;
+    bool isId13Presenttt = false;
     bool itemAdded55 = false;
     bool itemRemoved55 = false;
+    bool savedInExcel = false;
+    private string currentUserName = null;
+    private int highlightedProductIndex = -1;
+    private string excelFilePath = "D:\\hciii course\\hciii\\Smart_Shopping-main\\UserProfileByFace.xlsx";
+    private Dictionary<string, int> userCart = new Dictionary<string, int>();
+
     bool flagloginbluetooth = false;
     List<string> knownNames = new List<string>
     {
@@ -77,6 +90,16 @@ public class TuioDemo : Form, TuioListener
         { "object detection", null },
 
     };
+    Dictionary<string, (string Price, int Stock, string ImagePath)> productDetails = new Dictionary<string, (string, int, string)>
+{
+    { "Dermatique", ("$25", 10, "dermatique.jpg") },
+    { "Sunblock", ("$15", 20, "Sunblock.png") },
+    { "Deodorant", ("$10", 15, "Deodrant.jpeg") },
+    { "Nivea Cream", ("$20", 5, "NIVEA.jpeg") },
+    { "Vitamin D-3", ("$18", 8, "Vitamin.jpeg") },
+    { "One Two Three Medicine", ("$30", 12, "medicine.jpg") }
+};
+
 
     // admin
     Dictionary<string, int> stock = new Dictionary<string, int>
@@ -213,6 +236,29 @@ public class TuioDemo : Form, TuioListener
     }
     private void DrawCircularMenu(Graphics g, int centerX, int centerY, int radius, int highlightedIndex = -1)
     {
+        string backgroundImagePath = "backmenu.png"; // Update with your actual image path
+        if (File.Exists(backgroundImagePath))
+        {
+            using (Image bgImage = Image.FromFile(backgroundImagePath))
+            {
+                g.DrawImage(bgImage, new Rectangle(0, 0, width, height));
+            }
+        }
+
+        // Draw "Welcome" text and current user name at the top
+        string welcomeText = "Welcome";
+        string currentUserNameText = currentUserName ?? "Guest"; // Replace "Guest" if no user is logged in
+        string fullWelcomeText = $"{welcomeText}, {currentUserNameText}!";
+
+        using (Font welcomeFont = new Font("Times New Roman", 24, FontStyle.Bold))
+        using (Brush welcomeBrush = new SolidBrush(Color.DarkSlateBlue))
+        {
+            SizeF welcomeTextSize = g.MeasureString(fullWelcomeText, welcomeFont);
+            PointF welcomeTextLocation = new PointF((width - welcomeTextSize.Width) / 2, 20); // Position at the top center
+            g.DrawString(fullWelcomeText, welcomeFont, Brushes.White, welcomeTextLocation.X + 2, welcomeTextLocation.Y + 2); // Shadow
+            g.DrawString(fullWelcomeText, welcomeFont, welcomeBrush, welcomeTextLocation);
+        }
+
         int itemCount = circularMenuItems.Count; // Number of items in the menu
         float angleStep = 360f / itemCount;      // Angle per menu item
         float gapAngle = 2f;                     // Gap between menu items
@@ -333,8 +379,6 @@ public class TuioDemo : Form, TuioListener
         g.DrawString(centralText, centralFont, centralBrush,
                      centerX - centralTextSize.Width / 2, centerY - centralTextSize.Height / 2); // Actual text
     }
-
-
 
     private void DrawAboutUsPage(Graphics g)
     {
@@ -628,6 +672,187 @@ public class TuioDemo : Form, TuioListener
             }
         }
     }
+    private void DrawMonitorExpressionsPage(Graphics g)
+    {
+        try
+        {
+            // Background
+            string backgroundPath = "about_us_bgg.jpg"; // Update with your actual background image path
+            if (File.Exists(backgroundPath))
+            {
+                using (Image background = Image.FromFile(backgroundPath))
+                {
+                    g.DrawImage(background, new Rectangle(0, 0, width, height));
+                }
+            }
+
+            // Title
+            string title = "Monitor Expressions";
+            using (Font titleFont = new Font("Times New Roman", 32, FontStyle.Bold))
+            using (Brush titleBrush = new SolidBrush(ColorTranslator.FromHtml("#4a4a4a"))) // Dark gray
+            {
+                SizeF titleSize = g.MeasureString(title, titleFont);
+                PointF titleLocation = new PointF((width - titleSize.Width) / 2, 50);
+
+                // Add shadow for the title
+                g.DrawString(title, titleFont, Brushes.White, new PointF(titleLocation.X + 2, titleLocation.Y + 2));
+                g.DrawString(title, titleFont, titleBrush, titleLocation);
+            }
+
+            // Read and process Excel data
+            string excelFilePath = "D:\\hciii course\\hciii\\Smart_Shopping-main\\data.xlsx"; // Update with your actual file path
+            if (File.Exists(excelFilePath))
+            {
+                DataTable dataTable = LoadExcelAsDataTable(excelFilePath);
+
+                // Calculate emotion times for each user
+                var emotionTimeSummary = CalculateEmotionTimes(dataTable);
+
+                // Emotion icons dictionary
+                var emotionIcons = new Dictionary<string, string>
+            {
+                { "happy", "happy.png" },
+                { "sad", "sad.png" },
+                { "angry", "angry.png" },
+                { "neutral", "neatral.png" },
+                { "surprise", "surprice.png" }
+            };
+
+                // Display emotion rates
+                int startX = 100;
+                int startY = 150;
+                int rowHeight = 60;
+                int columnWidth = 250;
+                int iconSize = 40;
+
+                using (Font headerFont = new Font("Times New Roman", 16, FontStyle.Bold))
+                using (Font cellFont = new Font("Times New Roman", 14, FontStyle.Regular))
+                using (Brush headerBrush = new SolidBrush(Color.White))
+                using (Brush cellBrush = new SolidBrush(Color.Black))
+                {
+                    // Draw headers
+                    g.DrawString("User Name", headerFont, headerBrush, new PointF(startX, startY));
+                    g.DrawString("Emotion", headerFont, headerBrush, new PointF(startX + columnWidth, startY));
+                    g.DrawString("Total Time (s)", headerFont, headerBrush, new PointF(startX + columnWidth * 2, startY));
+
+                    startY += rowHeight;
+
+                    // Draw data
+                    foreach (var userEmotion in emotionTimeSummary)
+                    {
+                        string userName = userEmotion.Key;
+                        foreach (var emotionData in userEmotion.Value)
+                        {
+                            string emotion = emotionData.Key;
+                            string totalTime = emotionData.Value.ToString();
+
+                            // Draw user name and total time
+                            g.DrawString(userName, cellFont, cellBrush, new PointF(startX, startY));
+                            g.DrawString(emotion, cellFont, cellBrush, new PointF(startX + columnWidth, startY));
+                            g.DrawString(totalTime+"   seconds", cellFont, cellBrush, new PointF(startX + columnWidth * 2, startY));
+
+                            // Draw emotion icon
+                            if (emotionIcons.ContainsKey(emotion.ToLower()))
+                            {
+                                string iconPath = emotionIcons[emotion.ToLower()];
+                                if (File.Exists(iconPath))
+                                {
+                                    using (Image emotionIcon = Image.FromFile(iconPath))
+                                    {
+                                        g.DrawImage(emotionIcon, new Rectangle(startX + columnWidth - 50, startY, iconSize, iconSize));
+                                    }
+                                }
+                            }
+
+                            startY += rowHeight;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                string error = "Excel file not found.";
+                using (Font errorFont = new Font("Times New Roman", 16, FontStyle.Italic))
+                using (Brush errorBrush = new SolidBrush(Color.Red))
+                {
+                    g.DrawString(error, errorFont, errorBrush, new PointF(100, 150));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error drawing Monitor Expressions page: {ex.Message}");
+        }
+    }
+
+
+    private Dictionary<string, Dictionary<string, double>> CalculateEmotionTimes(DataTable dataTable)
+    {
+        var emotionTimeSummary = new Dictionary<string, Dictionary<string, double>>();
+
+        foreach (DataRow row in dataTable.Rows)
+        {
+            string userName = row[0]?.ToString() ?? "Unknown";
+            string emotion = row[1]?.ToString() ?? "Unknown";
+
+            // Parse the time value
+            if (!DateTime.TryParse(row[2]?.ToString(), out DateTime timestamp))
+            {
+                continue;
+            }
+
+            // Initialize user and emotion if not already present
+            if (!emotionTimeSummary.ContainsKey(userName))
+            {
+                emotionTimeSummary[userName] = new Dictionary<string, double>();
+            }
+
+            if (!emotionTimeSummary[userName].ContainsKey(emotion))
+            {
+                emotionTimeSummary[userName][emotion] = 0;
+            }
+
+            // Add the duration (assuming rows are sorted by time for simplicity)
+            emotionTimeSummary[userName][emotion] += timestamp.TimeOfDay.TotalSeconds;
+        }
+
+        return emotionTimeSummary;
+    }
+
+
+
+    private DataTable LoadExcelAsDataTable(string filePath)
+    {
+        DataTable dataTable = new DataTable();
+
+        try
+        {
+            using (var package = new OfficeOpenXml.ExcelPackage(new FileInfo(filePath)))
+            {
+                var worksheet = package.Workbook.Worksheets["Sheet1"];
+                foreach (var firstRowCell in worksheet.Cells[1, 1, 1, worksheet.Dimension.End.Column])
+                {
+                    dataTable.Columns.Add(firstRowCell.Text);
+                }
+
+                for (int row = 2; row <= worksheet.Dimension.End.Row; row++)
+                {
+                    var newRow = dataTable.NewRow();
+                    for (int col = 1; col <= worksheet.Dimension.End.Column; col++)
+                    {
+                        newRow[col - 1] = worksheet.Cells[row, col].Text;
+                    }
+                    dataTable.Rows.Add(newRow);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error reading Excel file: {ex.Message}");
+        }
+
+        return dataTable;
+    }
 
     protected override void OnPaintBackground(PaintEventArgs pevent)
     {
@@ -687,6 +912,7 @@ public class TuioDemo : Form, TuioListener
                     if (tobj.SymbolID == 6) isId3Present = true;
                    
                 }
+            
 
                 foreach (TuioObject tobj in objectList.Values)
                 {
@@ -775,7 +1001,7 @@ public class TuioDemo : Form, TuioListener
                     latestId = tobj.SymbolID;
                     if (tobj.SymbolID == 45)
                     {
-                        DrawDeodorantInfo();
+                        
                         if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
                         {
                             add45++;
@@ -796,10 +1022,11 @@ public class TuioDemo : Form, TuioListener
                             itemAdded = false;
                             itemRemoved = false;
                         }
+                        DrawDeodorantInfo(g);
                     }
                     else if (tobj.SymbolID == 55)
                     {
-                        DrawVitaminInfo();
+                        //DrawVitaminInfo(Graphics.FromHwnd(this.Handle));
                         if (tobj.AngleDegrees > 30 && tobj.AngleDegrees < 90 && !itemAdded)
                         {
                             add55++;
@@ -808,7 +1035,7 @@ public class TuioDemo : Form, TuioListener
                             itemRemoved55 = false;
 
                         }
-                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && add45 > 0)
+                        else if (tobj.AngleDegrees > 270 && tobj.AngleDegrees < 310 && !itemRemoved && add55 > 0)
                         {
                             add55--;
 
@@ -820,6 +1047,7 @@ public class TuioDemo : Form, TuioListener
                             itemAdded55 = false;
                             itemRemoved55 = false;
                         }
+                        DrawVitaminInfo(g);
                     }
                     else if (tobj.SymbolID == 3 && flagg)
                     {
@@ -886,6 +1114,9 @@ public class TuioDemo : Form, TuioListener
                         flaglogin = false;
 
                         DrawMenuItems(g, selectedRectangleIndex: 1, flag: true, borderColor: Color.Green);
+                    }else if (tobj.SymbolID == 20)
+                    {
+                        DrawMonitorExpressionsPage(g);
                     }
                     else if (tobj.SymbolID == 6  && flagg)
                     {
@@ -899,13 +1130,17 @@ public class TuioDemo : Form, TuioListener
 
                         DrawMenuItems(g, selectedRectangleIndex: 2, flag: true, borderColor: Color.Green);
                     }
-                    else if (tobj.SymbolID == 33)
+                    else if (tobj.SymbolID == 55)
                     {
-                        DrawDeodorantInfo();
+                        DrawVitaminInfo(g);
                     }
                     else if (tobj.SymbolID == 13)
                     {
                         DrawCrudPage(g);
+                    }
+                    else if(tobj.SymbolID == 21)
+                    {
+                        DrawProductsPage(g);
                     }
                     else
                     {
@@ -920,6 +1155,31 @@ public class TuioDemo : Form, TuioListener
                 }
 
             }
+            lock (objectList)
+            {
+                foreach (TuioObject tobj in objectList.Values)
+                {
+                    if (tobj.SymbolID == 13) // Detect TUI with SymbolID 13
+                    {
+                        isId13Presenttt = true;
+
+                        // Calculate the highlighted product index based on rotation
+                        rotationAngle = (float)tobj.AngleDegrees;
+                        int productCount = 4; // Number of products (adjust if more products are added)
+
+                        highlightedProductIndex = (int)((rotationAngle % 360) / (360f / productCount));
+                        highlightedProductIndex = (highlightedProductIndex + productCount) % productCount; // Ensure valid index
+                    }
+                }
+
+                if (isId13Presenttt)
+                {
+                    // Redraw the CRUD page with the highlighted product
+                    Invalidate(); // This triggers a redraw by calling OnPaint
+                }
+            }
+
+
             lock (objectList)
             {
                 foreach (TuioObject tobj in objectList.Values)
@@ -960,21 +1220,26 @@ public class TuioDemo : Form, TuioListener
                             case "About Us":
                                 //aboutus = true;
                                 DrawAboutUsPage(g);
+                                isId17Present = false;
                                 latestId = 11; // Update latestId when SymbolID 17 is detected
                                 break;
                             case "Our Products":
 
                                 latestId = 2;
                                 DrawMenuItems(g, selectedRectangleIndex: -1, flag: false, borderColor: Color.Transparent);
+                                isId17Present = false;
 
                                 break;
                             case "Home Page":
                                 DrawHomePage(g);
                                 latestId = 0;
+                                isId17Present = false;
 
                                 break;
                             case "Cart":
                                 DrawCrudPage(g);
+                                latestId = 13;
+                                isId17Present = false;
                                 break;
                             case "Instructions":
                                 //OpenInstructionsPage();
@@ -1023,11 +1288,11 @@ public class TuioDemo : Form, TuioListener
             else if (latestId == 11)
             {
                 DrawAboutUsPage(g);
-            }
-            else if (latestId == 33)
+            }else if (latestId == 21)
             {
-                DrawDeodorantInfo();
+                DrawProductsPage(g);
             }
+           
             else if (latestId == 12)
             {
                 int centerX = width / 2;
@@ -1057,20 +1322,20 @@ public class TuioDemo : Form, TuioListener
                 // Call the DrawCircularMenu function
                 DrawCircularMenu(g, centerX, centerY, radius);
             }
+            else if (latestId == 20)
+            {
+                DrawMonitorExpressionsPage(g);
+            }
             else if(latestId==45)
             {
-                DrawDeodorantInfo();
+                DrawDeodorantInfo(g);
 
             }
             else if (latestId == 55)
             {
-                DrawVitaminInfo();
+                DrawVitaminInfo(g);
             }
-            else if (latestId != 0)
-            {
-                g.FillRectangle(Brushes.Blue, new Rectangle(lastObjectPosition.X - 30, lastObjectPosition.Y - 30, 60, 60));
-                g.DrawString($"ID: {latestId}", font, Brushes.White, new PointF(lastObjectPosition.X - 25, lastObjectPosition.Y - 25));
-            }
+            
 
         }
 
@@ -1145,29 +1410,101 @@ public class TuioDemo : Form, TuioListener
             DrawMenuItems(g, selectedRectangleIndex: -1, flag: false, borderColor: Color.Transparent);
         }
     }
-    
+    private void SaveUserCartToExcel(string userName, bool showMessage = true)
+    {
+        try
+        {
+            savedInExcel = true;
+
+            // Map quantities to product categories
+            var userCartQuantities = new Dictionary<string, int>
+        {
+            { "quantity", OveralCart },         // Total quantity of items
+            { "quantityOfSunblock", OveralCart3 }, // Quantity of Sunblock
+            { "quantityOfWash", OveralCart5 }     // Quantity of Wash
+        };
+
+            using (var package = new ExcelPackage(new FileInfo(excelFilePath)))
+            {
+                // Get or create the worksheet
+                var worksheet = package.Workbook.Worksheets["Sheet1"] ?? package.Workbook.Worksheets.Add("Sheet1");
+
+                // Ensure the worksheet has headers
+                if (worksheet.Dimension == null)
+                {
+                    worksheet.Cells[1, 1].Value = "Name";
+                    worksheet.Cells[1, 2].Value = "quantity";
+                    worksheet.Cells[1, 3].Value = "products";
+                    worksheet.Cells[1, 4].Value = "emotion";
+                    worksheet.Cells[1, 5].Value = "quantityOfSunblock";
+                    worksheet.Cells[1, 6].Value = "quantityOfWash";
+                }
+
+                int totalRows = worksheet.Dimension?.Rows ?? 1;
+                bool userExists = false;
+
+                // Iterate through rows to find the current user
+                for (int row = 2; row <= totalRows; row++)
+                {
+                    string nameInRow = worksheet.Cells[row, 1].Text;
+
+                    if (nameInRow.Equals(userName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        userExists = true;
+
+                        // Update the user's cart data
+                        worksheet.Cells[row, 2].Value = userCartQuantities["quantity"]; // Total quantity
+                        worksheet.Cells[row, 5].Value = userCartQuantities["quantityOfSunblock"]; // Sunblock quantity
+                        worksheet.Cells[row, 6].Value = userCartQuantities["quantityOfWash"]; // Wash quantity
+
+                        // Concatenate products based on quantities
+                        var products = new List<string>();
+                        if (OveralCart3 > 0) products.Add("Sunblock");
+                        if (OveralCart5 > 0) products.Add("Wash");
+                        worksheet.Cells[row, 3].Value = string.Join(", ", products);
+
+                        package.Save();
+                        if (showMessage) MessageBox.Show("User cart successfully updated in Excel.");
+                        return;
+                    }
+                }
+
+                // If the user does not exist, optionally handle this case
+                if (!userExists)
+                {
+                    if (showMessage) MessageBox.Show($"User {userName} does not exist in the sheet.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error saving user cart to Excel: {ex.Message}");
+        }
+    }
+
     private void DrawSunblockInfo(Graphics g)
     {
         try
         {
-            
-                using (Image bgImage = Image.FromFile("plain_bk.png"))
-                {
-                    g.DrawImage(bgImage, new Rectangle(0, 0, width, height));
-                }
-            
+            // Load background image
+            using (Image bgImage = Image.FromFile("plain_bk.png"))
+            {
+                g.DrawImage(bgImage, new Rectangle(0, 0, width, height));
+            }
 
+            // Draw rounded rectangle for text content
             Rectangle rect = new Rectangle(150, 165, 400, 500);
             Color rectColor = Color.FromArgb(255, 234, 233, 239);
             int cornerRadius = 20;
             DrawRoundedRectangle(g, rect, rectColor, cornerRadius, Color.FromArgb(255, 255, 178, 34), 1);
 
+            // Product details text
             string[] sentences = {
-    "Dermatique Sunblock: Broad-spectrum SPF protection.",
-    "Lightweight, non-greasy, and quick-absorbing formula.",
-    "Hydrates skin while shielding from UV damage.",
-    "Ideal for daily use on all skin types."
-};
+            "Dermatique Sunblock: Broad-spectrum SPF protection.",
+            "Lightweight, non-greasy, and quick-absorbing formula.",
+            "Hydrates skin while shielding from UV damage.",
+            "Ideal for daily use on all skin types."
+        };
 
             Rectangle rect2 = new Rectangle(150, 165, 400, 500);
             Font textFont = new Font("Times New Roman", 14, FontStyle.Regular);
@@ -1177,6 +1514,7 @@ public class TuioDemo : Form, TuioListener
             int lineSpacing = 20;
             DrawTextBlock(g, rect2, sentences, textFont, textBrush, verticalPadding, horizontalPadding, lineSpacing);
 
+            // Display product image
             if (File.Exists(imagePaths[0]))
             {
                 using (Image img = Image.FromFile(imagePaths[0]))
@@ -1184,25 +1522,48 @@ public class TuioDemo : Form, TuioListener
                     g.DrawImage(img, new Rectangle(width - 600, 50, 400, 600));
                 }
             }
+
+            // Cart icon
+            string cartIconPath = "cartt.png"; // Path to the cart icon image
+            if (File.Exists(cartIconPath))
+            {
+                using (Image cartIcon = Image.FromFile(cartIconPath))
+                {
+                    g.DrawImage(cartIcon, new Rectangle(20, 20, 30, 30)); // Position the cart icon
+                }
+            }
+
+            // Display overall cart count
             string cartText = $"Overall Cart: {OveralCart3}";
             using (Font cartFont = new Font("Times New Roman", 16, FontStyle.Bold))
             using (SolidBrush cartBrush = new SolidBrush(Color.Black))
             {
-                g.DrawString(cartText, cartFont, cartBrush, new PointF(20, 20)); // Adjust the position as needed
+                g.DrawString(cartText, cartFont, cartBrush, new PointF(60, 20)); // Adjust the position as needed
             }
-            string cartTextt = $"allcartitems: {OveralCart}";
-            using (Font cartFont = new Font("Times New Roman", 16, FontStyle.Bold))
-            using (SolidBrush cartBrush = new SolidBrush(Color.Black))
+
+            // Display product price
+            string priceText = "Price: $15";
+            using (Font priceFont = new Font("Times New Roman", 16, FontStyle.Bold))
+            using (SolidBrush priceBrush = new SolidBrush(Color.Black))
             {
-                g.DrawString(cartTextt, cartFont, cartBrush, new PointF(50, 50)); // Adjust the position as needed
+                g.DrawString(priceText, priceFont, priceBrush, new PointF(20, 60));
+            }
+
+            // Calculate and display total price
+            int totalPrice = OveralCart3 * 15; // Assuming price is $15 per item
+            string totalPriceText = $"Total: ${totalPrice}";
+            using (Font totalFont = new Font("Times New Roman", 16, FontStyle.Bold))
+            using (SolidBrush totalBrush = new SolidBrush(Color.Black))
+            {
+                g.DrawString(totalPriceText, totalFont, totalBrush, new PointF(20, 100));
             }
         }
-
         catch (Exception ex)
         {
             Console.WriteLine("Error drawing sunblock info: " + ex.Message);
         }
     }
+
     private void InitializeComponent()
     {
         this.SuspendLayout();
@@ -1261,209 +1622,130 @@ public class TuioDemo : Form, TuioListener
     {
         try
         {
-            // Path to the background image
-            string backgroundPath = "plain_bk.png"; // Update this path if needed
+            // Get canvas dimensions
+            int canvasWidth = (int)g.VisibleClipBounds.Width;
+            int canvasHeight = (int)g.VisibleClipBounds.Height;
 
-            // Check if the background image exists
+            // Number of items per row and total rows needed
+            int itemsPerRow = 3; // 3 items per row
+            int totalRows = (int)Math.Ceiling(productRectangles.Count / (float)itemsPerRow);
+
+            // Adjust padding and calculate smaller dimensions for the rectangles
+            int padding = 80; // Space between items
+            int rectWidth = (canvasWidth - (padding * (itemsPerRow + 1))) / itemsPerRow - 80; // Reduced width
+            int rectHeight = (int)(rectWidth * 1.0); // Aspect ratio of 1.0 (square-like)
+
+            // Total grid height calculation
+            int totalGridHeight = totalRows * (rectHeight + padding) - padding;
+
+            // Center the grid vertically and horizontally
+            int totalGridWidth = itemsPerRow * (rectWidth + padding) - padding;
+            int offsetX = (canvasWidth - totalGridWidth) / 2;
+            int offsetY = (canvasHeight - totalGridHeight) / 2;
+
+            // Path to the background image
+            string backgroundPath = "plain_bk.png";
+
+            // Draw the background
             if (File.Exists(backgroundPath))
             {
-                // Load and draw the background image
                 using (Image backgroundImg = Image.FromFile(backgroundPath))
                 {
-                    // Draw the background image to fill the entire window
-                    g.DrawImage(backgroundImg, new Rectangle(0, 0, width, height));
+                    g.DrawImage(backgroundImg, new Rectangle(0, 0, canvasWidth, canvasHeight));
                 }
             }
-            else
-            {
-                Console.WriteLine("Background image not found.");
-            }
 
-            // Loop through each product rectangle to draw product details
-            for (int i = 0; i < 4; i++)
+            // Dictionary to store product prices
+            Dictionary<string, string> productPrices = new Dictionary<string, string>
+           {
+            { "Dermatique", "$25" },
+            { "Sunblock", "$15" },
+            { "Deodorant", "$10" },
+            { "Nivea Cream", "$20" },
+            { "Vitamin D-3", "$18" },
+            { "One Two Three Medicine", "$30" }
+           };
+
+            // Loop through each product rectangle
+            for (int i = 0; i < productRectangles.Count; i++)
             {
-                // Draw the main product display rectangle without rounded corners
-                Rectangle productRect = productRectangles[i].Item1;
+                // Calculate row and column for the current item
+                int row = i / itemsPerRow;
+                int col = i % itemsPerRow;
+
+                // Calculate position with padding and offsets for centering
+                int x = offsetX + col * (rectWidth + padding);
+                int y = offsetY + row * (rectHeight + padding);
+
+                // Define product rectangle
+                Rectangle productRect = new Rectangle(x, y, rectWidth, rectHeight);
                 Color productRectColor = Color.FromArgb(255, 234, 233, 239);
-                productRect.Y -= 300;
-            
-                // Draw rectangle with border if selected, else no border
+
+                // Draw rectangle border
                 bool drawBorder = (flag && i == selectedRectangleIndex);
                 Color effectiveBorderColor = drawBorder ? borderColor : productRectColor;
-                int borderWidth = drawBorder ? 3 : 0; // Adjust width if selected
+                int borderWidth = drawBorder ? 3 : 0;
 
                 DrawRectangleBorder(g, productRect, productRectColor, effectiveBorderColor, borderWidth, drawBorder);
 
-                // Draw the product image inside the rectangle without changing its location
+                // Draw the product image
                 if (File.Exists(imagePaths[i]))
                 {
                     using (Bitmap productImg = new Bitmap(imagePaths[i]))
                     {
-                        // Make the top-left pixel's color transparent
                         Color transparentColor = productImg.GetPixel(0, 0);
                         productImg.MakeTransparent(transparentColor);
 
-                        int imgX, imgY, imgWidth, imgHeight;
+                        // Scale image proportionally to fit inside the rectangle
+                        int imgWidth = (int)(rectWidth * 0.6f); // Reduced size for better fit
+                        int imgHeight = (int)(rectHeight * 0.6f);
 
-                        if (i == 0)
-                        {
-                            imgX = (productRect.X + (productRect.Width - 200) / 2) - 30;
-                            imgY = productRect.Y - 15;
-                            imgWidth = 280;
-                            imgHeight = 400;
-                        }
-                        else
-                        {
-                            imgX = productRect.X + (productRect.Width - 200) / 2;
-                            imgY = productRect.Y + 20;
-                            imgWidth = 200;
-                            imgHeight = 350;
-                        }
+                        // Center the image within the rectangle
+                        int imgX = x + (rectWidth - imgWidth) / 2;
+                        int imgY = y + (rectHeight - imgHeight - (int)(rectHeight * 0.2f)) / 2;
 
-                        // Draw the image with transparency
                         g.DrawImage(productImg, new Rectangle(imgX, imgY, imgWidth, imgHeight));
                     }
                 }
 
-                // Set text based on index
-                string bottomText;
-                switch (i)
-                {
-                    case 0:
-                        bottomText = "Dermatique";
-                        break;
-                    case 1:
-                        bottomText = "Sunblock";
-                        break;
-                    case 2:
-                        bottomText = "Deodorant";
-                        break;
-                    case 3:
-                        bottomText = "Nivea Cream";
-                        break;
-                    case 4:
-                        bottomText = "Vitamin D-3";
-                        break;
-                    case 5:
-                        bottomText = "One Two Three Medicine";
-                        break;
-                   default:
-                        bottomText = "Unknown";
-                        break;
-                }
+                // Define and draw the pink text section BELOW the product rectangle
+                int textSectionHeight = (int)(rectHeight * 0.15f); // Reduced height of text section
+                Rectangle bottomTextRect = new Rectangle(
+                    x,
+                    y + rectHeight - 10, // Position it just below the product rectangle
+                    rectWidth,
+                    textSectionHeight
+                );
 
-                // Draw the pink section at the bottom
-                Rectangle bottomTextRect = productRectangles[i].Item2;
-       
-                bottomTextRect.Y -= 300; 
-
-                using (SolidBrush pinkBrush = new SolidBrush(Color.FromArgb(255, 254, 81, 161)))
+                using (SolidBrush pinkBrush = new SolidBrush(Color.BurlyWood))
                 {
                     g.FillRectangle(pinkBrush, bottomTextRect);
                 }
 
                 // Draw text inside the pink section
-                using (Font textFont = new Font("Times New Roman", 14, FontStyle.Bold))
-                using (Brush textBrush = new SolidBrush(Color.White))
-                {
-                    SizeF textSize = g.MeasureString(bottomText, textFont);
-                    PointF textLocation = new PointF(
-                        bottomTextRect.X + (bottomTextRect.Width - textSize.Width) / 2 - 15,
-                        bottomTextRect.Y + (bottomTextRect.Height - textSize.Height) / 23
-                    );
-                    g.DrawString(bottomText, textFont, textBrush, textLocation);
-                }
-            }
-            for (int i = 4; i < productRectangles.Count; i++)
-            {
-                // Draw the main product display rectangle without rounded corners
-                Rectangle productRect = productRectangles[i].Item1;
-                Color productRectColor = Color.FromArgb(255, 234, 233, 239);
-                productRect.Y += 200;
-                productRect.X -= 1200;
-                // Draw rectangle with border if selected, else no border
-                bool drawBorder = (flag && i == selectedRectangleIndex);
-                Color effectiveBorderColor = drawBorder ? borderColor : productRectColor;
-                int borderWidth = drawBorder ? 3 : 0; // Adjust width if selected
-
-                DrawRectangleBorder(g, productRect, productRectColor, effectiveBorderColor, borderWidth, drawBorder);
-
-                // Draw the product image inside the rectangle without changing its location
-                if (File.Exists(imagePaths[i]))
-                {
-                    using (Bitmap productImg = new Bitmap(imagePaths[i]))
-                    {
-                        // Make the top-left pixel's color transparent
-                        Color transparentColor = productImg.GetPixel(0, 0);
-                        productImg.MakeTransparent(transparentColor);
-
-                        int imgX, imgY, imgWidth, imgHeight;
-
-                        if (i == 0)
-                        {
-                            imgX = (productRect.X + (productRect.Width - 200) / 2) - 30;
-                            imgY = productRect.Y - 15;
-                            imgWidth = 280;
-                            imgHeight = 400;
-                        }
-                        else
-                        {
-                            imgX = productRect.X + (productRect.Width - 200) / 2;
-                            imgY = productRect.Y + 20;
-                            imgWidth = 200;
-                            imgHeight = 350;
-                        }
-
-                        // Draw the image with transparency
-                        g.DrawImage(productImg, new Rectangle(imgX, imgY, imgWidth, imgHeight));
-                    }
-                }
-
-                // Set text based on index
                 string bottomText;
+                string productName;
                 switch (i)
                 {
-                    case 0:
-                        bottomText = "Dermatique";
-                        break;
-                    case 1:
-                        bottomText = "Sunblock";
-                        break;
-                    case 2:
-                        bottomText = "Deodorant";
-                        break;
-                    case 3:
-                        bottomText = "Nivea Cream";
-                        break;
-                    case 4:
-                        bottomText = "Vitamin D-3";
-                        break;
-                    case 5:
-                        bottomText = "One Two Three Medicine";
-                        break;
-                    default:
-                        bottomText = "Unknown";
-                        break;
+                    case 0: productName = "Sunblock"; break;
+                    case 1: productName = "Dermatique"; break;
+                    case 2: productName = "Deodorant"; break;
+                    case 3: productName = "Nivea Cream"; break;
+                    case 4: productName = "Vitamin D-3"; break;
+                    case 5: productName = "One Two Three Medicine"; break;
+                    default: productName = "Unknown"; break;
                 }
 
-                // Draw the pink section at the bottom
-                Rectangle bottomTextRect = productRectangles[i].Item2;
+                string price = productPrices.ContainsKey(productName) ? productPrices[productName] : "N/A";
+                bottomText = $"{productName}\nPrice: {price}";
 
-                bottomTextRect.Y += 200; 
-                bottomTextRect.X -= 1200;
-                using (SolidBrush pinkBrush = new SolidBrush(Color.FromArgb(255, 254, 81, 161)))
-                {
-                    g.FillRectangle(pinkBrush, bottomTextRect);
-                }
-
-                // Draw text inside the pink section
-                using (Font textFont = new Font("Times New Roman", 14, FontStyle.Bold))
+                using (Font textFont = new Font("Times New Roman", 12, FontStyle.Bold)) // Adjust font size if needed
                 using (Brush textBrush = new SolidBrush(Color.White))
                 {
                     SizeF textSize = g.MeasureString(bottomText, textFont);
                     PointF textLocation = new PointF(
-                        bottomTextRect.X + (bottomTextRect.Width - textSize.Width) / 2 - 15,
-                        bottomTextRect.Y + (bottomTextRect.Height - textSize.Height) / 23
+                        bottomTextRect.X + (bottomTextRect.Width - textSize.Width) / 2.0f,
+                        bottomTextRect.Y + (bottomTextRect.Height - textSize.Height) / 2.0f
                     );
                     g.DrawString(bottomText, textFont, textBrush, textLocation);
                 }
@@ -1474,6 +1756,90 @@ public class TuioDemo : Form, TuioListener
             Console.WriteLine("Error drawing product display: " + ex.Message);
         }
     }
+    private void DrawProductsPage(Graphics g)
+    {
+        try
+        {
+            // Background
+            string backgroundPath = "about_us_bgg.jpg"; // Update with your actual background image path
+            if (File.Exists(backgroundPath))
+            {
+                using (Image background = Image.FromFile(backgroundPath))
+                {
+                    g.DrawImage(background, new Rectangle(0, 0, width, height));
+                }
+            }
+
+            // Title
+            string title = "Products Management";
+            using (Font titleFont = new Font("Times New Roman", 32, FontStyle.Bold))
+            using (Brush titleBrush = new SolidBrush(ColorTranslator.FromHtml("#4a4a4a")))
+            {
+                SizeF titleSize = g.MeasureString(title, titleFont);
+                PointF titleLocation = new PointF((width - titleSize.Width) / 2, 50);
+
+                // Add shadow for the title
+                g.DrawString(title, titleFont, Brushes.White, new PointF(titleLocation.X + 2, titleLocation.Y + 2));
+                g.DrawString(title, titleFont, titleBrush, titleLocation);
+            }
+
+            // Product list rendering
+            int startX = 100;
+            int startY = 150;
+            int rowHeight = 150; // Increased row height to fit images
+            int columnWidth = 300;
+            int imageSize = 100; // Image size for each product
+
+            using (Font cellFont = new Font("Times New Roman", 14, FontStyle.Regular))
+            using (Brush cellBrush = new SolidBrush(Color.Black))
+            using (Brush buttonBrush = new SolidBrush(Color.Red))
+            {
+                foreach (var product in productDetails)
+                {
+                    string productName = product.Key;
+                    string price = product.Value.Price;
+                    int stock = product.Value.Stock;
+                    string imagePath = product.Value.ImagePath;
+
+                    // Draw product image
+                    if (File.Exists(imagePath))
+                    {
+                        using (Image productImage = Image.FromFile(imagePath))
+                        {
+                            g.DrawImage(productImage, new Rectangle(startX, startY, imageSize, imageSize));
+                        }
+                    }
+
+                    // Draw product name, price, and stock
+                    g.DrawString($"Product: {productName}", cellFont, cellBrush, new PointF(startX + imageSize + 20, startY));
+                    g.DrawString($"Price: {price}", cellFont, cellBrush, new PointF(startX + imageSize + 20, startY + 30));
+                    g.DrawString($"Stock: {stock}", cellFont, cellBrush, new PointF(startX + imageSize + 20, startY + 60));
+
+                    // Draw "Delete" button
+                    Rectangle deleteButton = new Rectangle(startX + columnWidth * 2, startY + (rowHeight / 2 - 20), 100, 40);
+                    g.FillRectangle(buttonBrush, deleteButton);
+                    g.DrawRectangle(Pens.Black, deleteButton);
+
+                    using (Font buttonFont = new Font("Times New Roman", 12, FontStyle.Bold))
+                    {
+                        g.DrawString("Delete", buttonFont, Brushes.White, deleteButton, new StringFormat
+                        {
+                            Alignment = StringAlignment.Center,
+                            LineAlignment = StringAlignment.Center
+                        });
+                    }
+
+                    startY += rowHeight;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error drawing Products Page: {ex.Message}");
+        }
+    }
+
+
 
     private void DrawRectangleBorder(Graphics g, Rectangle rect, Color rectColor, Color borderColor, int borderWidth, bool drawBorder)
     {
@@ -1511,10 +1877,21 @@ public class TuioDemo : Form, TuioListener
             // Option 1: Update Stock
             Rectangle updateStockButtonRect = new Rectangle(startX, startY, buttonWidth, buttonHeight);
             DrawRoundedButton(g, updateStockButtonRect, "Update Stock");
-
+            startY += buttonHeight;
+            startY += buttonSpacing;
             // Option 2: Remove Product
-            Rectangle removeProductButtonRect = new Rectangle(startX, startY + buttonHeight + buttonSpacing, buttonWidth, buttonHeight);
+            Rectangle removeProductButtonRect = new Rectangle(startX, startY , buttonWidth, buttonHeight);
             DrawRoundedButton(g, removeProductButtonRect, "Remove Product");
+            startY += buttonHeight;
+            startY += buttonSpacing;
+
+            Rectangle updateUsers = new Rectangle(startX, startY, buttonWidth, buttonHeight);
+            DrawRoundedButton(g, updateUsers, "update users");
+            startY += buttonHeight;
+            startY += buttonSpacing;
+            Rectangle monitorUserExpression = new Rectangle(startX, startY, buttonWidth, buttonHeight);
+            DrawRoundedButton(g, monitorUserExpression, "users expressions");
+
 
 
 
@@ -1524,7 +1901,7 @@ public class TuioDemo : Form, TuioListener
             using (Brush headerBrush = new SolidBrush(Color.Black))
             {
                 SizeF headerSize = g.MeasureString(headerText, headerFont);
-                PointF headerLocation = new PointF((width - headerSize.Width) / 2, startY - headerSize.Height - 20);
+                PointF headerLocation = new PointF((width - headerSize.Width) / 2, 200);
                 g.DrawString(headerText, headerFont, headerBrush, headerLocation);
             }
         }
@@ -1537,23 +1914,25 @@ public class TuioDemo : Form, TuioListener
     {
         try
         {
-           
-                using (Image bgImage = Image.FromFile("plain_bk.png"))
-                {
-                    g.DrawImage(bgImage, new Rectangle(0, 0, width, height));
-                }
-            
+            // Draw background image
+            using (Image bgImage = Image.FromFile("plain_bk.png"))
+            {
+                g.DrawImage(bgImage, new Rectangle(0, 0, width, height));
+            }
 
+            // Draw the details box
             Rectangle rect = new Rectangle(150, 165, 400, 500);
             Color rectColor = Color.FromArgb(255, 234, 233, 239);
             int cornerRadius = 20;
             DrawRoundedRectangle(g, rect, rectColor, cornerRadius, Color.Green, 1);
+
+            // Product description
             string[] sentences = {
-    "Dermatique Facial Wash: Daily purifying formula.",
-    "Botanicals cleanse deeply without drying.",
-    "Suitable for all skin types, including sensitive.",
-    "Use: Apply to damp skin, massage, and rinse."
-};
+            "Dermatique Facial Wash: Daily purifying formula.",
+            "Botanicals cleanse deeply without drying.",
+            "Suitable for all skin types, including sensitive.",
+            "Use: Apply to damp skin, massage, and rinse."
+        };
             Rectangle rect2 = new Rectangle(150, 165, 400, 500);
             Font textFont = new Font("Times New Roman", 14, FontStyle.Regular);
             Brush textBrush = new SolidBrush(Color.FromArgb(100, 100, 100));
@@ -1562,6 +1941,7 @@ public class TuioDemo : Form, TuioListener
             int lineSpacing = 20;
             DrawTextBlock(g, rect2, sentences, textFont, textBrush, verticalPadding, horizontalPadding, lineSpacing);
 
+            // Draw product image
             if (File.Exists(imagePaths[1]))
             {
                 using (Image img = Image.FromFile(imagePaths[1]))
@@ -1569,24 +1949,45 @@ public class TuioDemo : Form, TuioListener
                     g.DrawImage(img, new Rectangle(width - 600, 50, 400, 600));
                 }
             }
-            string cartText = $"this product cart: {OveralCart5}";
-            using (Font cartFont = new Font("Times New Roman", 16, FontStyle.Bold))
-            using (SolidBrush cartBrush = new SolidBrush(Color.Black))
+
+            // Cart quantity and icon
+            string cartIconPath = "cartt.png";
+            if (File.Exists(cartIconPath))
             {
-                g.DrawString(cartText, cartFont, cartBrush, new PointF(20, 20)); // Adjust the position as needed
+                using (Image cartIcon = Image.FromFile(cartIconPath))
+                {
+                    g.DrawImage(cartIcon, new Rectangle(20, 20, 30, 30)); // Adjust position and size as needed
+                }
             }
-            string cartTextt = $"allcartitems: {OveralCart}";
+
+            string cartText = $"Cart: {OveralCart5}";
             using (Font cartFont = new Font("Times New Roman", 16, FontStyle.Bold))
             using (SolidBrush cartBrush = new SolidBrush(Color.Black))
             {
-                g.DrawString(cartTextt, cartFont, cartBrush, new PointF(50, 50)); // Adjust the position as needed
+                g.DrawString(cartText, cartFont, cartBrush, new PointF(70, 20));
+            }
+
+            // Draw cart icon
+           
+           
+
+            // Display product price and total
+            int price = 20; // Price of the product
+            string priceText = $"Price: ${price}";
+            string totalPriceText = $"Total: ${OveralCart5 * price}";
+            using (Font priceFont = new Font("Times New Roman", 16, FontStyle.Bold))
+            using (SolidBrush priceBrush = new SolidBrush(Color.Black))
+            {
+                g.DrawString(priceText, priceFont, priceBrush, new PointF(20, 60)); // Adjust position as needed
+                g.DrawString(totalPriceText, priceFont, priceBrush, new PointF(20, 100)); // Adjust position as needed
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Error drawing sunblock info: " + ex.Message);
+            Console.WriteLine("Error drawing Dermatique info: " + ex.Message);
         }
     }
+
     public void DrawTextBlock(Graphics g, Rectangle rect, string[] sentences, Font textFont, Brush textBrush, int verticalPadding, int horizontalPadding, int lineSpacing)
     {
         float startY = rect.Y + verticalPadding;
@@ -1696,26 +2097,25 @@ public class TuioDemo : Form, TuioListener
             }
         }
     }
-    private void DrawVitaminInfo()
+    private void DrawVitaminInfo(Graphics g)
     {
-
         int size = height / 10;
-        using (Graphics g = this.CreateGraphics())
-        {
-            // Load the background and deodorant images
+        
+        
+            // Load the background and product images
             Bitmap background = new Bitmap("lightgreen.jpg");
             g.DrawImage(background, new Rectangle(0, 0, width, height));
 
-            Bitmap dermatiqueImage = new Bitmap("Vitamin.jpeg");
-            dermatiqueImage.MakeTransparent(dermatiqueImage.GetPixel(0, 0));
-            lastObjectImage = dermatiqueImage; // Store the image as the last known object image
+            Bitmap productImage = new Bitmap("Vitamin.jpeg");
+            productImage.MakeTransparent(productImage.GetPixel(0, 0));
+            lastObjectImage = productImage; // Store the image as the last known object image
 
             // Set positions for the image and details
             int staticX = width / 2 - 500; // Static position for the image
             int staticY = height / 2 - 200;
             int newSize = size * 4;
 
-            // Draw the deodorant image
+            // Draw the product image
             g.DrawImage(lastObjectImage, new Rectangle(staticX - newSize / 2, staticY - newSize / 2, newSize, newSize));
 
             // Draw product name and details
@@ -1774,14 +2174,41 @@ public class TuioDemo : Form, TuioListener
                 Alignment = StringAlignment.Center,
                 LineAlignment = StringAlignment.Center
             });
-        }
+
+            // Display product price
+            int price = 18; // Price of the product
+            string priceText = $"Price: ${price}";
+            using (Font priceFont = new Font("Times New Roman", 16, FontStyle.Bold))
+            using (SolidBrush priceBrush = new SolidBrush(Color.Black))
+            {
+                g.DrawString(priceText, priceFont, priceBrush, new PointF(staticX - 100, staticY + newSize / 2 + 200)); // Adjust position as needed
+            }
+
+            // Draw cart icon
+            string cartIconPath = "cartt.png";
+            if (File.Exists(cartIconPath))
+            {
+                using (Image cartIcon = Image.FromFile(cartIconPath))
+                {
+                    g.DrawImage(cartIcon, new Rectangle(staticX -150, staticY + newSize  + 40, 30, 30)); // Adjust position and size as needed
+                }
+            }
+
+            // Display total cost
+            string totalPriceText = $"Total: ${add55 * price}";
+            using (Font totalPriceFont = new Font("Times New Roman", 16, FontStyle.Bold))
+            using (SolidBrush totalPriceBrush = new SolidBrush(Color.Black))
+            {
+                g.DrawString(totalPriceText, totalPriceFont, totalPriceBrush, new PointF(staticX - 100, staticY + newSize / 2 + 240)); // Adjust position as needed
+            }
+        
     }
+
     // Method to draw Deodorant information with background
-    private void DrawDeodorantInfo()
+    private void DrawDeodorantInfo(Graphics g)
     {
         int size = height / 10;
-        using (Graphics g = this.CreateGraphics())
-        {
+        
             // Load the background and deodorant images
             Bitmap background = new Bitmap("Backk.jpg");
             g.DrawImage(background, new Rectangle(0, 0, width, height));
@@ -1854,7 +2281,7 @@ public class TuioDemo : Form, TuioListener
                 Alignment = StringAlignment.Center,
                 LineAlignment = StringAlignment.Center
             });
-        }
+        
     }
     
     private void DrawLoginScreen(Graphics g)
@@ -1902,59 +2329,110 @@ public class TuioDemo : Form, TuioListener
         }
 
     }
+
     private void DrawCrudPage(Graphics g)
     {
         try
         {
-            // Background with a gradient effect
-            using (LinearGradientBrush backgroundBrush = new LinearGradientBrush(
-                new Rectangle(0, 0, width, height),
-                Color.FromArgb(255, 240, 248, 255),
-                Color.FromArgb(255, 173, 216, 230),
-                LinearGradientMode.Vertical))
+            // Background image
+            string backgroundPath = "backmenu.png"; // Use the same background as the circular menu
+            if (File.Exists(backgroundPath))
             {
-                g.FillRectangle(backgroundBrush, new Rectangle(0, 0, width, height));
-            }
-
-            // Title with a shadow effect
-            string title = "Your Shopping Cart";
-            string backgroundImagePath = "about_us_bgg.jpg"; // Replace with your actual background image path
-            if (File.Exists(backgroundImagePath))
-            {
-                using (Image bgImage = Image.FromFile(backgroundImagePath))
+                using (Image background = Image.FromFile(backgroundPath))
                 {
-                    g.DrawImage(bgImage, new Rectangle(0, 0, width, height));
+                    g.DrawImage(background, new Rectangle(0, 0, width, height));
                 }
             }
+
+            // Title
+            string title = "Your Shopping Cart";
             using (Font titleFont = new Font("Times New Roman", 32, FontStyle.Bold))
-            using (Brush shadowBrush = new SolidBrush(Color.Gray))
-            using (Brush titleBrush = new SolidBrush(Color.DarkSlateBlue))
+            using (Brush titleBrush = new SolidBrush(ColorTranslator.FromHtml("#4a4a4a"))) // Dark gray
             {
                 SizeF titleSize = g.MeasureString(title, titleFont);
                 PointF titleLocation = new PointF((width - titleSize.Width) / 2, 30);
 
-                // Shadow for depth
-                g.DrawString(title, titleFont, shadowBrush, new PointF(titleLocation.X + 3, titleLocation.Y + 3));
+                // Add shadow for the title
+                g.DrawString(title, titleFont, Brushes.White, new PointF(titleLocation.X + 2, titleLocation.Y + 2));
                 g.DrawString(title, titleFont, titleBrush, titleLocation);
             }
 
-            // Card-style display for each product
+            // Adjust product quantities if needed
+            if (isright)
+            {
+                if (highlightedProductIndex == 0) OveralCart3++;
+                else if (highlightedProductIndex == 1) OveralCart5++;
+                else if (highlightedProductIndex == 2) add45++;
+                else if (highlightedProductIndex == 3) add55++;
+                isright = false;
+            }
+            if (isleft)
+            {
+                if (highlightedProductIndex == 0 && OveralCart3 > 0) OveralCart3--;
+                else if (highlightedProductIndex == 1 && OveralCart5 > 0) OveralCart5--;
+                else if (highlightedProductIndex == 2 && add45 > 0) add45--;
+                else if (highlightedProductIndex == 3 && add55 > 0) add55--;
+                isleft = false;
+            }
+
+            // Product card display
             int startX = 100;
             int startY = 150;
             int spacingY = 220;
 
-            // Display Sunblock product
+            // Product 1: Sunblock
             if (OveralCart3 > 0)
             {
-                DrawProductCard(g, startX, startY, "Sunblock", OveralCart3, imagePaths[0]);
+                bool isHighlighted = highlightedProductIndex == 0; // Highlight index 0
+                DrawProductCard(g, startX, startY, "Sunblock", OveralCart3, imagePaths[0], isHighlighted);
+                if (startY > this.Height - 300)
+                {
+                    startY = -70;
+                    startX += 750;
+                }
                 startY += spacingY;
             }
 
-            // Display Dermatique product
+            // Product 2: Dermatique
             if (OveralCart5 > 0)
             {
-                DrawProductCard(g, startX, startY, "Dermatique", OveralCart5, imagePaths[1]);
+                bool isHighlighted = highlightedProductIndex == 1; // Highlight index 1
+                DrawProductCard(g, startX, startY, "Dermatique", OveralCart5, imagePaths[1], isHighlighted);
+                if (startY > this.Height - 300)
+                {
+                    startY = -70;
+                    startX += 750;
+                }
+                startY += spacingY;
             }
+
+            // Product 3: Deodorant
+            if (add45 > 0)
+            {
+                bool isHighlighted = highlightedProductIndex == 2; // Highlight index 2
+                DrawProductCard(g, startX, startY, "Degree Cool Rush Deodorant", add45, "Deodrant.jpeg", isHighlighted);
+                if (startY > this.Height - 300)
+                {
+                    startY = -70;
+                    startX += 750;
+                }
+                startY += spacingY;
+              
+            }
+
+            // Product 4: Vitamin
+            if (add55 > 0)
+            {
+                bool isHighlighted = highlightedProductIndex == 3; // Highlight index 3
+                DrawProductCard(g, startX, startY, "Vitamin D-3", add55, "Vitamin.jpeg", isHighlighted);
+                if (startY > this.Height - 300)
+                {
+                    startY = -70;
+                    startX += 750;
+                }
+                startY += spacingY;
+            }
+       
         }
         catch (Exception ex)
         {
@@ -1962,11 +2440,16 @@ public class TuioDemo : Form, TuioListener
         }
     }
 
-    private void DrawProductCard(Graphics g, int startX, int startY, string productName, int productCount, string productImagePath)
+
+
+    private void DrawProductCard(Graphics g, int startX, int startY, string productName, int productCount, string productImagePath, bool isHighlighted)
     {
         try
         {
-            // Card background with rounded corners
+            // Use matching highlight and border colors
+            Color cardBorderColor = isHighlighted ? ColorTranslator.FromHtml("#FFA500") : ColorTranslator.FromHtml("#4a4a4a");
+
+            // Card background
             Rectangle cardRect = new Rectangle(startX, startY, 700, 180);
             using (GraphicsPath cardPath = new GraphicsPath())
             {
@@ -1982,7 +2465,7 @@ public class TuioDemo : Form, TuioListener
                     g.FillPath(cardBrush, cardPath);
                 }
 
-                using (Pen borderPen = new Pen(Color.FromArgb(173, 216, 230), 3))
+                using (Pen borderPen = new Pen(cardBorderColor, isHighlighted ? 4 : 2))
                 {
                     g.DrawPath(borderPen, cardPath);
                 }
@@ -2000,24 +2483,79 @@ public class TuioDemo : Form, TuioListener
             // Product name and quantity
             string productInfo = $"{productName}\nQuantity: {productCount}";
             using (Font productFont = new Font("Times New Roman", 14, FontStyle.Bold))
-            using (Brush productBrush = new SolidBrush(Color.DarkSlateGray))
+            using (Brush productBrush = new SolidBrush(ColorTranslator.FromHtml("#4a4a4a")))
             {
                 g.DrawString(productInfo, productFont, productBrush, new PointF(startX + 200, startY + 30));
             }
 
-            // "Delete" button
-            Rectangle deleteButtonRect = new Rectangle(startX + 500, startY + 40, 150, 40);
-            DrawModernButton(g, deleteButtonRect, "Delete", Color.IndianRed);
+            // Increment and Decrement buttons
+            int buttonSize = 40;
+            int buttonX = startX + cardRect.Width - 160;
+            int incrementButtonY = startY + 60;
+            int decrementButtonY = incrementButtonY + buttonSize + 10;
 
-            // "Update" button
-            Rectangle updateButtonRect = new Rectangle(startX + 500, startY + 100, 150, 40);
-            DrawModernButton(g, updateButtonRect, "Update", Color.MediumSeaGreen);
+            // Decrement Button (-)
+            Rectangle decrementButtonRect = new Rectangle(buttonX, decrementButtonY, buttonSize, buttonSize);
+            g.FillRectangle(Brushes.LightGray, decrementButtonRect);
+            g.DrawRectangle(Pens.Black, decrementButtonRect);
+            g.DrawString("-", new Font("Times New Roman", 18), Brushes.Black, decrementButtonRect, new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center
+            });
+
+            // Quantity Display Box
+            Rectangle quantityBoxRect = new Rectangle(buttonX + buttonSize + 10, incrementButtonY, buttonSize, buttonSize);
+            g.FillRectangle(Brushes.White, quantityBoxRect);
+            g.DrawRectangle(Pens.Black, quantityBoxRect);
+            g.DrawString($"{productCount}", new Font("Times New Roman", 14), Brushes.Black, quantityBoxRect, new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center
+            });
+
+            // Increment Button (+)
+            Rectangle incrementButtonRect = new Rectangle(buttonX, incrementButtonY, buttonSize, buttonSize);
+            g.FillRectangle(Brushes.LightGray, incrementButtonRect);
+            g.DrawRectangle(Pens.Black, incrementButtonRect);
+            g.DrawString("+", new Font("Times New Roman", 18), Brushes.Black, incrementButtonRect, new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center
+            });
+
+            // Draw Delete Icon
+            string deleteIconPath = "delete.png";
+            int deleteIconX = startX + cardRect.Width - 70;
+            int deleteIconY = startY + 30;
+            if (File.Exists(deleteIconPath))
+            {
+                using (Image deleteIcon = Image.FromFile(deleteIconPath))
+                {
+                    g.DrawImage(deleteIcon, new Rectangle(deleteIconX, deleteIconY, buttonSize, buttonSize));
+                }
+            }
+
+            // Draw Update Icon
+            string updateIconPath = "update.png";
+            int updateIconY = deleteIconY + buttonSize + 10;
+            if (File.Exists(updateIconPath))
+            {
+                using (Image updateIcon = Image.FromFile(updateIconPath))
+                {
+                    g.DrawImage(updateIcon, new Rectangle(deleteIconX, updateIconY, buttonSize, buttonSize));
+                }
+            }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error displaying product card: {ex.Message}");
         }
     }
+
+
+
+
 
     private void DrawModernButton(Graphics g, Rectangle buttonRect, string buttonText, Color buttonColor)
     {
@@ -2187,6 +2725,59 @@ public class TuioDemo : Form, TuioListener
             }
         }
     }
+    private void LoadUserProfile(string userName)
+    {
+        try
+        {
+            using (var package = new ExcelPackage(new FileInfo(excelFilePath)))
+            {
+                // Get the worksheet by name (update "Sheet1" to match your sheet name)
+                var worksheet = package.Workbook.Worksheets["Sheet1"];
+
+                // Check if the worksheet is empty
+                if (worksheet.Dimension == null)
+                {
+                    MessageBox.Show("The worksheet is empty.");
+                    return;
+                }
+
+                // Get the total rows and columns
+                int totalRows = worksheet.Dimension.Rows;
+
+                bool userFound = false;
+
+                // Iterate through each row
+                for (int row = 2; row <= totalRows; row++) // Assuming row 1 contains headers
+                {
+                    string nameInRow = worksheet.Cells[row, 1].Text; // Column 1 contains names
+
+                    if (nameInRow.Equals(userName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        userFound = true;
+
+                        // Fetch relevant user data
+                        string product = worksheet.Cells[row, 2].Text;  // Column 2: Product
+                        string quantity = worksheet.Cells[row, 3].Text; // Column 3: Quantity
+                        string emotion = worksheet.Cells[row, 4].Text;  // Column 4: Emotion
+
+                        // Display or process the data
+                        MessageBox.Show($"Name: {nameInRow}\nProduct: {product}\nQuantity: {quantity}\nEmotion: {emotion}");
+                    }
+                }
+
+                if (!userFound)
+                {
+                    MessageBox.Show($"No data found for user: {userName}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error reading the Excel file: {ex.Message}");
+        }
+    }
+
+
 
     private void Tutorial(Graphics g)
     {
@@ -2232,6 +2823,14 @@ public class TuioDemo : Form, TuioListener
             g.DrawString("To close this screen, show the product again", textFont, textBrush, textStartX, textStartY);
         }
     }
+    private void Logout()
+    {
+        
+        currentUserName = null;
+        userCart.Clear();
+    }
+
+
     private async Task HandleServerAsync(string server, int port, string serverName)
     {
         try
@@ -2267,24 +2866,28 @@ public class TuioDemo : Form, TuioListener
                                     MessageBox.Show("Received message: Vitamin detected! Displaying Vitamin Info...");
                                     //latestId = 55;
                                     // Call a method to draw the information about Vitamin
-                                    Invoke(new Action(() => DrawVitaminInfo()));
-                                    latestId = 55;
+                                    //Invoke(new Action(() => DrawVitaminInfo(Graphics.FromHwnd(this.Handle))));
+                                    //latestId = 55;
 
                                 }
+
+
                                 else if (message.ToLower().Contains("deodorant"))
                                 {
                                     // Show message box for deodorant
                                     MessageBox.Show("Received message: Deodorant detected! Displaying Deodorant Info...");
                                     // Call a method to draw the information about Deodorant
-                                    Invoke(new Action(() => DrawDeodorantInfo()));
-                                    latestId = 45;
+                                    Invoke(new Action(() => DrawDeodorantInfo(Graphics.FromHwnd(this.Handle))));
+                                   // latestId = 45;
                                     
-                                }else if(message.ToLower().Contains("right"))
+                                }
+                                else if (message.ToLower().Contains("right"))
                                 {
-                                    MessageBox.Show("Received message: Gesture detected! right...");
-                                    Invoke(new Action(() => DrawVitaminInfo()));
+                                    isright= true;
+                                    MessageBox.Show("Received message: object detection! right...");
+                                   // Invoke(new Action(() => DrawVitaminInfo(Graphics.FromHwnd(this.Handle))));
 
-                                    if (latestId==3)
+                                    if (latestId == 3)
                                     {
                                         OveralCart3++;
                                         if (OveralCart3 == 1)
@@ -2302,7 +2905,7 @@ public class TuioDemo : Form, TuioListener
 
                                         }
                                     }
-                                    if(latestId==45)
+                                    if (latestId == 45)
                                     {
                                         add45++;
                                         if (add45 == 1)
@@ -2322,11 +2925,13 @@ public class TuioDemo : Form, TuioListener
                                 }
                                 else if (message.ToLower().Contains("left"))
                                 {
-                                    Invoke(new Action(() => DrawVitaminInfo()));
-                                   
+                                    //  Invoke(new Action(() => DrawVitaminInfo(Graphics.FromHwnd(this.Handle))));
 
-                                    MessageBox.Show("Received message: Gesture detected! left...");
-                                    if(latestId==3)
+                                    isleft = true;
+                                    //MessageBox.Show("Received message: Gesture detected! left...");
+                                    MessageBox.Show("Received message: object detection! left...");
+
+                                    if (latestId == 3)
                                     {
                                         if (OveralCart3 != 0)
                                         {
@@ -2339,7 +2944,7 @@ public class TuioDemo : Form, TuioListener
 
                                         }
                                     }
-                                    if(latestId==5)
+                                    if (latestId == 5)
                                     {
                                         if (OveralCart5 != 0)
                                         {
@@ -2352,7 +2957,7 @@ public class TuioDemo : Form, TuioListener
 
                                         }
                                     }
-                                    if(latestId==45)
+                                    if (latestId == 45)
                                     {
                                         if (add45 != 0)
                                         {
@@ -2388,10 +2993,18 @@ public class TuioDemo : Form, TuioListener
                                         {
                                             if (message.ToLower().Contains(name))
                                             {
+                                                currentUserName = name;
+                                                
+                                                LoadUserProfile(currentUserName);
+                           
                                                 facelogin = true;
                                                 // Show the complete message in a MessageBox
                                                 MessageBox.Show($"Complete Message: {message}");
                                                 MessageBox.Show($"Welcome: {name}");
+                                                latestId = 12;
+                                               // Invoke(new Action(() => DrawCrudPage(Graphics.FromHwnd(this.Handle))));
+                                                Invoke(new Action(() => DrawCircularMenu(Graphics.FromHwnd(this.Handle),width/2,height/2,300,-1)));
+
                                                 break; // Exit the loop once a match is found
                                             }
                                         }
